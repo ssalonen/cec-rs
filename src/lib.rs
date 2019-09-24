@@ -127,7 +127,7 @@ pub struct CecKeypress {
 //     // pub onSourceActivated: FnSourceActivated,
 // }
 
-pub struct CecCallbacks {
+struct CecCallbacks {
     pub key_press_callback: Option<Box<dyn FnMut(CecKeypress)>>,
     pub command_received_callback: Option<Box<dyn FnMut(CecCommand)>>,
     // pub onSourceActivated: FnSourceActivated,
