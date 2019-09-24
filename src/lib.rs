@@ -21,8 +21,10 @@ fn interpret_u8_as_i8(i: u8) -> i8 {
 fn first_3(string: CString) -> [i8; 3] {
     let mut data: [i8; 3] = [0; 3];
     let bytes = string.into_bytes();
-    for i in 0..3 {
-        bytes.get(i).map(|c| data[i] = interpret_u8_as_i8(*c));
+    for (i, data_elem) in data.iter_mut().enumerate() {
+        if let Some(c) = bytes.get(i) {
+            *data_elem = interpret_u8_as_i8(*c)
+        }
     }
     data
 }
@@ -30,8 +32,10 @@ fn first_3(string: CString) -> [i8; 3] {
 fn first_13(string: CString) -> [i8; 13] {
     let mut data: [i8; 13] = [0; 13];
     let bytes = string.into_bytes();
-    for i in 0..13 {
-        bytes.get(i).map(|c| data[i] = interpret_u8_as_i8(*c));
+    for (i, data_elem) in data.iter_mut().enumerate() {
+        if let Some(c) = bytes.get(i) {
+            *data_elem = interpret_u8_as_i8(*c)
+        }
     }
     data
 }
