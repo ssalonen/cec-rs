@@ -40,10 +40,6 @@ fn first_13(string: CString) -> [i8; 13] {
     data
 }
 
-pub type FnKeyPress = dyn FnMut(CecKeypress);
-pub type FnCommand = dyn FnMut(CecCommand);
-pub type FnSourceActivated = dyn FnMut(CecLogicalAddress, bool);
-
 pub type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug)]
@@ -60,12 +56,13 @@ pub struct CecDatapacket(cec_datapacket);
 
 impl CecDatapacket {
     pub fn new(parameter_data: Vec<u8>) -> CecDatapacket {
-        let mut data = [0u8; 64usize];
-        if parameter_data.len() > 64 {
-            panic!("Maximum data packet size is 64");
-        }
-        for i in 0..64 {
-            parameter_data.get(i).map(|v| data[i] = *v);
+        assert!(parameter_data.len() <= 64, "Maximum data packet size is 64");
+        let mut data = [0u8; 64usize];        
+
+        for (i, data_elem) in data.iter_mut().enumerate() {
+            if let Some(v) = parameter_data.get(i) {
+                *data_elem = *v;
+            }
         }
         Self(cec_datapacket {
             data,
@@ -137,12 +134,16 @@ struct CecCallbacks {
     // pub onSourceActivated: FnSourceActivated,
 }
 
+pub type FnKeyPress = dyn FnMut(CecKeypress);
+pub type FnCommand = dyn FnMut(CecCommand);
+pub type FnSourceActivated = dyn FnMut(CecLogicalAddress, bool);
+
 extern "C" fn key_press_callback(rust_callbacks: *mut c_void, keypress_raw: *const cec_keypress) {
     if keypress_raw.is_null() {
         return;
     }
     let rust_callbacks: *mut CecCallbacks = rust_callbacks as *mut CecCallbacks;
-    let callback: &mut Option<Box<dyn FnMut(CecKeypress)>>;
+    let callback: &mut Option<Box<FnKeyPress>>;
     let keypress_nonnull: cec_keypress;
     assert!(!rust_callbacks.is_null());
     unsafe {
@@ -167,7 +168,7 @@ extern "C" fn command_received_callback(
         return;
     }
     let rust_callbacks: *mut CecCallbacks = rust_callbacks as *mut CecCallbacks;
-    let callback: &mut Option<Box<dyn FnMut(CecCommand)>>;
+    let callback: &mut Option<Box<FnCommand>>;
     let command_nonnull: cec_command;
     assert!(!rust_callbacks.is_null());
     unsafe {
