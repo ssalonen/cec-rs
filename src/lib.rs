@@ -443,8 +443,8 @@ impl CecConnection {
         &self,
         port: &CStr,
         open_timeout: u32,
-        key_press_callback: Option<Box<dyn FnMut(CecKeypress)>>,
-        command_received_callback: Option<Box<dyn FnMut(CecCommand)>>,
+        key_press_callback: Option<Box<FnKeyPress>>,
+        command_received_callback: Option<Box<FnCommand>>,
     ) -> Result<()> {
         {
             let ret: ::std::os::raw::c_int;
