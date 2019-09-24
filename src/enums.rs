@@ -45,12 +45,6 @@ pub enum CecAudioStatus {
 }
 #[repr(u32)]
 #[derive(FromPrimitive, Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum CecBoolean {
-    False = libcec_sys::CEC_FALSE,
-    True = libcec_sys::CEC_TRUE,
-}
-#[repr(u32)]
-#[derive(FromPrimitive, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum CecVersion {
     VersionUnknown = libcec_sys::CEC_VERSION_UNKNOWN,
     Version12 = libcec_sys::CEC_VERSION_1_2,
