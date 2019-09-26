@@ -1,11 +1,12 @@
 use enums::{CecAdapterType, CecDeviceType, CecLogicalAddress, CecOpcode, CecUserControlCode};
 use libcec_sys::{
-    cec_command, cec_datapacket, cec_device_type_list, cec_keypress, libcec_clear_configuration,
-    libcec_close, libcec_configuration, libcec_connection_t, libcec_destroy,
-    libcec_enable_callbacks, libcec_initialise, libcec_open, libcec_transmit, ICECCallbacks,
-    LIBCEC_VERSION_CURRENT,
+    cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_logical_addresses,
+    libcec_clear_configuration, libcec_close, libcec_configuration, libcec_connection_t,
+    libcec_destroy, libcec_enable_callbacks, libcec_initialise, libcec_open, libcec_transmit,
+    ICECCallbacks, LIBCEC_VERSION_CURRENT,
 };
 use num_traits::FromPrimitive;
+use std::convert::TryFrom;
 use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_void;
@@ -40,38 +41,42 @@ fn first_13(string: CString) -> [i8; 13] {
     data
 }
 
-pub type Result<T> = result::Result<T, Error>;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CecDatapacket(Vec<u8>);
 
-#[derive(Debug)]
-pub enum Error {
-    LibInitFailed,
-    NoAdapterFound,
-    AdapterOpenFailed,
-    CallbackRegistrationFailed,
-    TransmitFailed,
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum TryFromCecDatapacketError {
+    TooLargeDataPacketSize,
 }
 
-#[derive(Copy, Clone)]
-pub struct CecDatapacket(cec_datapacket);
+impl TryFrom<CecDatapacket> for cec_datapacket {
+    type Error = TryFromCecDatapacketError;
 
-impl CecDatapacket {
-    pub fn new(parameter_data: Vec<u8>) -> CecDatapacket {
-        assert!(parameter_data.len() <= 64, "Maximum data packet size is 64");
-        let mut data = [0u8; 64usize];        
+    fn try_from(datapacket: CecDatapacket) -> std::result::Result<Self, Self::Error> {
+        if datapacket.0.len() > 64 {
+            Err(TryFromCecDatapacketError::TooLargeDataPacketSize)
+        } else {
+            let mut data = [0u8; 64usize];
 
-        for (i, data_elem) in data.iter_mut().enumerate() {
-            if let Some(v) = parameter_data.get(i) {
-                *data_elem = *v;
+            for (i, data_elem) in datapacket.0.iter().enumerate() {
+                data[i] = *data_elem;
             }
+            Ok(cec_datapacket {
+                data,
+                size: datapacket.0.len() as u8,
+            })
         }
-        Self(cec_datapacket {
-            data,
-            size: parameter_data.len() as u8,
-        })
     }
 }
 
-#[derive(Copy, Clone)]
+impl From<cec_datapacket> for CecDatapacket {
+    fn from(datapacket: cec_datapacket) -> CecDatapacket {
+        let end = datapacket.size as usize;
+        CecDatapacket(datapacket.data[..end].to_vec())
+    }
+}
+
+#[derive(Clone)]
 pub struct CecCommand {
     #[doc = "< the logical address of the initiator of this message"]
     pub initiator: CecLogicalAddress,
@@ -91,30 +96,92 @@ pub struct CecCommand {
     pub transmit_timeout: Duration,
 }
 
-impl From<CecCommand> for cec_command {
-    fn from(command: CecCommand) -> Self {
-        cec_command {
+impl TryFrom<CecCommand> for cec_command {
+    type Error = TryFromCecDatapacketError;
+
+    fn try_from(command: CecCommand) -> std::result::Result<Self, Self::Error> {
+        let parameters: cec_datapacket = command.parameters.try_into()?;
+        Ok(cec_command {
             initiator: command.initiator as i32,
             destination: command.destination as i32,
             ack: command.ack as i8,
             eom: command.eom as i8,
             opcode: command.opcode as u32,
-            parameters: command.parameters.0,
+            parameters,
             opcode_set: command.opcode_set as i8,
             transmit_timeout: command.transmit_timeout.as_millis() as i32,
+        })
+    }
+}
+
+pub enum TryFromCecCommandError {
+    UnknownOpcode,
+    UnknownInitiator,
+    UnknownDestination,
+}
+
+impl TryFrom<cec_command> for CecCommand {
+    type Error = TryFromCecCommandError;
+    fn try_from(command: cec_command) -> std::result::Result<Self, Self::Error> {
+        let opcode =
+            CecOpcode::from_u32(command.opcode).ok_or(TryFromCecCommandError::UnknownOpcode)?;
+        let initiator = CecLogicalAddress::from_i32(command.initiator)
+            .ok_or(TryFromCecCommandError::UnknownInitiator)?;
+        let destination = CecLogicalAddress::from_i32(command.destination)
+            .ok_or(TryFromCecCommandError::UnknownDestination)?;
+        let parameters = command.parameters.into();
+        let transmit_timeout = Duration::from_millis(if command.transmit_timeout < 0 {
+            0
+        } else {
+            command.transmit_timeout.try_into().unwrap()
+        });
+        Ok(CecCommand {
+            initiator,
+            destination,
+            ack: command.ack != 0,
+            eom: command.eom != 0,
+            opcode,
+            parameters,
+            opcode_set: command.opcode_set != 0,
+            transmit_timeout,
+        })
+    }
+}
+
+/// List
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CecLogicalAddresses(Vec<CecLogicalAddress>);
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum TryFromCecLogicalAddressesError {
+    TooManyAddresses,
+}
+
+impl TryFrom<CecLogicalAddresses> for cec_logical_addresses {
+    type Error = TryFromCecLogicalAddressesError;
+
+    fn try_from(addresses: CecLogicalAddresses) -> std::result::Result<Self, Self::Error> {
+        let mut data = cec_logical_addresses {
+            primary: CecLogicalAddress::Unknown as i32,
+            addresses: [CecLogicalAddress::Unknown as i32; 16],
+        };
+        if addresses.0.len() > data.addresses.len() + 1 {
+            // The addesses would not fit the primary and "secondary" addresses
+            Err(TryFromCecLogicalAddressesError::TooManyAddresses)
+        } else {
+            let mut iter = addresses.0.iter().enumerate();
+            if let Some((_, first)) = iter.next() {
+                data.primary = *first as i32;
+            }
+            for (i, address) in iter {
+                data.addresses[i] = *address as i32;
+            }
+            Ok(data)
         }
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct CecLogicalAddresses {
-    #[doc = "< the primary logical address to use"]
-    pub primary: CecLogicalAddress,
-    #[doc = "< the list of addresses"]
-    pub addresses: [i32; 16usize],
-}
-
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct CecKeypress {
     #[doc = "< the keycode"]
     pub keycode: CecUserControlCode,
@@ -122,11 +189,22 @@ pub struct CecKeypress {
     pub duration: Duration,
 }
 
-// pub struct CecCallbacks<FnKeyPress> where FnKeyPress : FnMut(CecKeypress) {
-//     pub onKeyPress: FnKeyPress,
-//     // pub onCommandReceived: FnC,
-//     // pub onSourceActivated: FnSourceActivated,
-// }
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum TryFromCecKeyPressError {
+    UnknownKeycode,
+}
+
+impl TryFrom<cec_keypress> for CecKeypress {
+    type Error = TryFromCecKeyPressError;
+    fn try_from(keypress: cec_keypress) -> std::result::Result<Self, Self::Error> {
+        let keycode = CecUserControlCode::from_u32(keypress.keycode)
+            .ok_or(TryFromCecKeyPressError::UnknownKeycode)?;
+        Ok(CecKeypress {
+            keycode,
+            duration: Duration::from_millis(keypress.duration.into()),
+        })
+    }
+}
 
 struct CecCallbacks {
     pub key_press_callback: Option<Box<dyn FnMut(CecKeypress)>>,
@@ -151,11 +229,8 @@ extern "C" fn key_press_callback(rust_callbacks: *mut c_void, keypress_raw: *con
         keypress_nonnull = *keypress_raw;
     }
     if let Some(rust_callback) = callback {
-        if let Some(keycode) = CecUserControlCode::from_u32(keypress_nonnull.keycode) {
-            rust_callback(CecKeypress {
-                keycode,
-                duration: Duration::from_millis(keypress_nonnull.duration.into()),
-            });
+        if let Ok(keypress) = keypress_nonnull.try_into() {
+            rust_callback(keypress);
         }
     }
 }
@@ -175,28 +250,9 @@ extern "C" fn command_received_callback(
         callback = &mut (*rust_callbacks).command_received_callback;
         command_nonnull = *command_raw;
     }
-    let transmit_timeout = Duration::from_millis(if command_nonnull.transmit_timeout < 0 {
-        0
-    } else {
-        command_nonnull.transmit_timeout.try_into().unwrap()
-    });
     if let Some(rust_callback) = callback {
-        if let Some(opcode) = CecOpcode::from_u32(command_nonnull.opcode) {
-            if let Some(initiator) = CecLogicalAddress::from_i32(command_nonnull.initiator) {
-                if let Some(destination) = CecLogicalAddress::from_i32(command_nonnull.destination)
-                {
-                    rust_callback(CecCommand {
-                        initiator,
-                        destination,
-                        ack: command_nonnull.ack != 0,
-                        eom: command_nonnull.eom != 0,
-                        opcode,
-                        parameters: CecDatapacket(command_nonnull.parameters),
-                        opcode_set: command_nonnull.opcode_set != 0,
-                        transmit_timeout,
-                    });
-                }
-            }
+        if let Ok(command) = command_nonnull.try_into() {
+            rust_callback(command);
         }
     }
 }
@@ -211,10 +267,10 @@ static mut CALLBACKS: ICECCallbacks = ICECCallbacks {
     sourceActivated: Option::None,
 };
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CecDeviceTypeVec(Vec<CecDeviceType>);
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CecConfiguration {
     pub device_name: CString,
     #[doc = "< the device type(s) to use on the CEC bus for libCEC"]
@@ -299,6 +355,7 @@ impl CecConfiguration {
     }
 }
 
+// TODO: impl TryFrom<CecConfiguration> for libcec_configuration
 impl Into<libcec_configuration> for CecConfiguration {
     fn into(self) -> libcec_configuration {
         let mut cfg: libcec_configuration;
@@ -327,11 +384,11 @@ impl Into<libcec_configuration> for CecConfiguration {
         }
         if let Some(v) = self.wake_devices {
             // TODO:
-            // cfg.wakeDevices = v.into();
+            // cfg.wakeDevices = v.try_into();
         }
         if let Some(v) = self.power_off_devices {
             // TODO:
-            // cfg.powerOffDevices = v.into();
+            // cfg.powerOffDevices = v.try_into();
         }
         if let Some(v) = self.server_version {
             cfg.serverVersion = v;
@@ -353,7 +410,7 @@ impl Into<libcec_configuration> for CecConfiguration {
         // }
         if let Some(v) = self.logical_addresses {
             // TODO:
-            // cfg.logicalAddresses = v.into();
+            // cfg.logicalAddresses = v.try_into();
         }
         if let Some(v) = self.firmware_version {
             cfg.iFirmwareVersion = v;
@@ -393,6 +450,7 @@ impl Into<libcec_configuration> for CecConfiguration {
     }
 }
 
+// TODO: impl TryFrom<CecDeviceTypeVec> for cec_device_type_list
 impl Into<cec_device_type_list> for CecDeviceTypeVec {
     fn into(self: CecDeviceTypeVec) -> cec_device_type_list {
         let no_devices = [CecDeviceType::Reserved as u32; 5];
@@ -426,14 +484,25 @@ pub struct CecConnection {
     pub config: CecConfiguration,
 }
 
+pub type CecConnectionResult<T> = result::Result<T, CecConnectionResultError>;
+
+#[derive(Debug)]
+pub enum CecConnectionResultError {
+    LibInitFailed,
+    NoAdapterFound,
+    AdapterOpenFailed,
+    CallbackRegistrationFailed,
+    TransmitFailed,
+}
+
 impl CecConnection {
-    pub fn new(config: CecConfiguration) -> Result<CecConnection> {
+    pub fn new(config: CecConfiguration) -> CecConnectionResult<CecConnection> {
         let conn: libcec_connection_t;
         unsafe {
             conn = libcec_initialise(&mut config.clone().into());
         }
         if conn as usize == 0 {
-            Err(Error::LibInitFailed)
+            Err(CecConnectionResultError::LibInitFailed)
         } else {
             Ok(CecConnection { conn, config })
         }
@@ -445,25 +514,25 @@ impl CecConnection {
         open_timeout: u32,
         key_press_callback: Option<Box<FnKeyPress>>,
         command_received_callback: Option<Box<FnCommand>>,
-    ) -> Result<()> {
+    ) -> CecConnectionResult<()> {
         {
             let ret: ::std::os::raw::c_int;
             unsafe {
                 ret = libcec_open(self.conn, port.as_ptr(), open_timeout);
             }
             if ret == 0 {
-                return Err(Error::AdapterOpenFailed);
+                return Err(CecConnectionResultError::AdapterOpenFailed);
             }
         }
 
         self.enable_callbacks(key_press_callback, command_received_callback)
     }
 
-    pub fn transmit(&self, command: cec_command) -> Result<()> {
+    pub fn transmit(&self, command: cec_command) -> CecConnectionResult<()> {
         let ret: ::std::os::raw::c_int;
         unsafe { ret = libcec_transmit(self.conn, &command) }
         if ret == 0 {
-            return Err(Error::TransmitFailed);
+            return Err(CecConnectionResultError::TransmitFailed);
         }
         Ok(())
     }
@@ -472,7 +541,7 @@ impl CecConnection {
         &self,
         key_press_callback: Option<Box<dyn FnMut(CecKeypress)>>,
         command_received_callback: Option<Box<dyn FnMut(CecCommand)>>,
-    ) -> Result<()> {
+    ) -> CecConnectionResult<()> {
         let ret: ::std::os::raw::c_int;
         let mut rust_callbacks = CecCallbacks {
             key_press_callback,
@@ -483,7 +552,7 @@ impl CecConnection {
             ret = libcec_enable_callbacks(self.conn, rust_callbacks_as_void_ptr, &mut CALLBACKS);
         }
         if ret == 0 {
-            return Err(Error::CallbackRegistrationFailed);
+            return Err(CecConnectionResultError::CallbackRegistrationFailed);
         }
         Ok(())
     }
