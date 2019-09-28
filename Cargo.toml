@@ -10,3 +10,4 @@ edition = "2018"
 libcec-sys = { path = "../libcec-sys" }
 num-traits = "0.2"
 num-derive = "0.2.5"
+arrayvec = "0.5.0"
