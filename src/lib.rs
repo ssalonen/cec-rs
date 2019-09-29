@@ -10,7 +10,6 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use std::convert::TryFrom;
 use std::convert::TryInto;
 use std::ffi::CString;
-use std::ops::Deref;
 use std::os::raw::c_void;
 use std::time::Duration;
 use std::{mem, result};
