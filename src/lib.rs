@@ -9,7 +9,8 @@ use libcec_sys::{
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::convert::TryFrom;
 use std::convert::TryInto;
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
+use std::ops::Deref;
 use std::os::raw::c_void;
 use std::time::Duration;
 use std::{mem, result};
@@ -20,7 +21,7 @@ fn interpret_u8_as_i8(i: u8) -> i8 {
     unsafe { std::mem::transmute(i) }
 }
 
-fn first_3(string: CString) -> [i8; 3] {
+fn first_3(string: String) -> [i8; 3] {
     let mut data: [i8; 3] = [0; 3];
     let bytes = string.into_bytes();
     for (i, data_elem) in data.iter_mut().enumerate() {
@@ -31,7 +32,7 @@ fn first_3(string: CString) -> [i8; 3] {
     data
 }
 
-fn first_13(string: CString) -> [i8; 13] {
+fn first_13(string: String) -> [i8; 13] {
     let mut data: [i8; 13] = [0; 13];
     let bytes = string.into_bytes();
     for (i, data_elem) in data.iter_mut().enumerate() {
@@ -70,7 +71,6 @@ impl From<cec_datapacket> for CecDatapacket {
 
 #[cfg(test)]
 mod datapacket_tests {
-    // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
     /// Assert that
@@ -184,6 +184,7 @@ impl From<CecCommand> for cec_command {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TryFromCecCommandError {
     UnknownOpcode,
     UnknownInitiator,
@@ -219,36 +220,166 @@ impl TryFrom<cec_command> for CecCommand {
     }
 }
 
-/// List
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CecLogicalAddresses(Vec<CecLogicalAddress>);
+#[cfg(test)]
+mod command_tests {
+    use super::*;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum TryFromCecLogicalAddressesError {
-    TooManyAddresses,
+    fn assert_eq_ffi_packet(packet: cec_datapacket, packet2: cec_datapacket) {
+        assert_eq!(packet.size, packet2.size);
+        assert!(&packet.data.iter().eq(packet2.data.iter()));
+    }
+
+    fn assert_eq_ffi_command(actual: cec_command, expected: cec_command) {
+        assert_eq!(actual.ack, expected.ack);
+        assert_eq!(actual.destination, expected.destination);
+        assert_eq!(actual.eom, expected.eom);
+        assert_eq!(actual.initiator, expected.initiator);
+        assert_eq!(actual.opcode, expected.opcode);
+        assert_eq!(actual.opcode_set, expected.opcode_set);
+        assert_eq_ffi_packet(actual.parameters, expected.parameters);
+        assert_eq!(actual.transmit_timeout, expected.transmit_timeout);
+    }
+
+    fn assert_eq_command(actual: CecCommand, expected: CecCommand) {
+        assert_eq!(actual.ack, expected.ack);
+        assert_eq!(actual.destination, expected.destination);
+        assert_eq!(actual.eom, expected.eom);
+        assert_eq!(actual.initiator, expected.initiator);
+        assert_eq!(actual.opcode, expected.opcode);
+        assert_eq!(actual.opcode_set, expected.opcode_set);
+        assert_eq!(actual.parameters.0, expected.parameters.0);
+        assert_eq!(actual.transmit_timeout, expected.transmit_timeout);
+    }
+
+    #[test]
+    fn test_to_ffi() {
+        let mut parameters = ArrayVec::new();
+        parameters.push(2);
+        parameters.push(3);
+        let command = CecCommand {
+            opcode: CecOpcode::ClearAnalogueTimer,
+            initiator: CecLogicalAddress::Playbackdevice1,
+            destination: CecLogicalAddress::Playbackdevice2,
+            parameters: CecDatapacket(parameters.clone()),
+            transmit_timeout: Duration::from_secs(65),
+            ack: false,
+            eom: true,
+            opcode_set: true,
+        };
+        let ffi_command: cec_command = command.into();
+        assert_eq_ffi_command(
+            ffi_command,
+            cec_command {
+                ack: 0,
+                destination: CecLogicalAddress::Playbackdevice2 as i32,
+                eom: 1,
+                initiator: CecLogicalAddress::Playbackdevice1 as i32,
+                opcode: CecOpcode::ClearAnalogueTimer as u32,
+                opcode_set: 1,
+                parameters: CecDatapacket(parameters).into(), // OK to use here, verified in CecDatapacket unit tests
+                transmit_timeout: 65_000,
+            },
+        )
+    }
+
+    #[test]
+    fn test_from_ffi() {
+        let mut parameters = ArrayVec::new();
+        parameters.push(2);
+        parameters.push(3);
+        let ffi_command = cec_command {
+            ack: 0,
+            destination: CecLogicalAddress::Playbackdevice2 as i32,
+            eom: 1,
+            initiator: CecLogicalAddress::Playbackdevice1 as i32,
+            opcode: CecOpcode::ClearAnalogueTimer as u32,
+            opcode_set: 1,
+            parameters: CecDatapacket(parameters.clone()).into(), // OK to use here, verified in CecDatapacket unit tests
+            transmit_timeout: 65_000,
+        };
+        let command: CecCommand = ffi_command.try_into().unwrap();
+        assert_eq_command(
+            command,
+            CecCommand {
+                ack: false,
+                destination: CecLogicalAddress::Playbackdevice2,
+                eom: true,
+                initiator: CecLogicalAddress::Playbackdevice1,
+                opcode: CecOpcode::ClearAnalogueTimer,
+                opcode_set: true,
+                parameters: CecDatapacket(parameters),
+                transmit_timeout: Duration::from_millis(65000),
+            },
+        )
+    }
 }
 
-impl TryFrom<CecLogicalAddresses> for cec_logical_addresses {
-    type Error = TryFromCecLogicalAddressesError;
+/// List
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CecLogicalAddresses(ArrayVec<[CecLogicalAddress; 17]>);
 
-    fn try_from(addresses: CecLogicalAddresses) -> std::result::Result<Self, Self::Error> {
+impl From<CecLogicalAddresses> for cec_logical_addresses {
+    fn from(addresses: CecLogicalAddresses) -> cec_logical_addresses {
         let mut data = cec_logical_addresses {
             primary: CecLogicalAddress::Unknown as i32,
             addresses: [CecLogicalAddress::Unknown as i32; 16],
         };
-        if addresses.0.len() > data.addresses.len() + 1 {
-            // The addesses would not fit the primary and "secondary" addresses
-            Err(TryFromCecLogicalAddressesError::TooManyAddresses)
-        } else {
-            let mut iter = addresses.0.iter().enumerate();
-            if let Some((_, first)) = iter.next() {
-                data.primary = *first as i32;
-            }
-            for (i, address) in iter {
-                data.addresses[i] = *address as i32;
-            }
-            Ok(data)
+        let mut iter = addresses.0.iter().enumerate();
+        if let Some((_, first)) = iter.next() {
+            data.primary = *first as i32;
         }
+        for (i, address) in iter {
+            data.addresses[i - 1] = *address as i32;
+        }
+        data
+    }
+}
+
+#[cfg(test)]
+mod logical_addresses_tests {
+    use super::*;
+
+    #[test]
+    fn test_to_ffi_no_address() {
+        let addresses = ArrayVec::new();
+        let ffi_addresses: cec_logical_addresses = CecLogicalAddresses(addresses).into();
+        assert_eq!(ffi_addresses.primary, CecLogicalAddress::Unknown as i32);
+        assert_eq!(
+            ffi_addresses.addresses,
+            [CecLogicalAddress::Unknown as i32; 16]
+        )
+    }
+
+    #[test]
+    fn test_to_ffi_one_address() {
+        let mut addresses = ArrayVec::new();
+        addresses.push(CecLogicalAddress::Playbackdevice1);
+        let ffi_addresses: cec_logical_addresses = CecLogicalAddresses(addresses).into();
+        assert_eq!(
+            ffi_addresses.primary,
+            CecLogicalAddress::Playbackdevice1 as i32
+        );
+        assert_eq!(
+            ffi_addresses.addresses,
+            [CecLogicalAddress::Unknown as i32; 16]
+        )
+    }
+
+    #[test]
+    fn test_to_ffi_three_address() {
+        let mut addresses = ArrayVec::new();
+        addresses.push(CecLogicalAddress::Playbackdevice1);
+        addresses.push(CecLogicalAddress::Playbackdevice2);
+        addresses.push(CecLogicalAddress::Audiosystem);
+        let ffi_addresses: cec_logical_addresses = CecLogicalAddresses(addresses).into();
+        assert_eq!(
+            ffi_addresses.primary,
+            CecLogicalAddress::Playbackdevice1 as i32
+        );
+        let ffi_secondary = ffi_addresses.addresses;
+        assert_eq!(ffi_secondary[0], CecLogicalAddress::Playbackdevice2 as i32);
+        assert_eq!(ffi_secondary[1], CecLogicalAddress::Audiosystem as i32);
+        assert_eq!(ffi_secondary[2..], [CecLogicalAddress::Unknown as i32; 14]);
     }
 }
 
@@ -274,6 +405,73 @@ impl TryFrom<cec_keypress> for CecKeypress {
             keycode,
             duration: Duration::from_millis(keypress.duration.into()),
         })
+    }
+}
+
+#[cfg(test)]
+mod keypress_tests {
+    use super::*;
+
+    use libcec_sys::CEC_USER_CONTROL_CODE_UP;
+
+    #[test]
+    fn test_keypress_from_ffi_known_code() {
+        let keypress: CecKeypress = cec_keypress {
+            keycode: CEC_USER_CONTROL_CODE_UP,
+            duration: 300,
+        }
+        .try_into()
+        .unwrap();
+        assert_eq!(keypress.keycode, CecUserControlCode::Up);
+        assert_eq!(keypress.duration, Duration::from_millis(300));
+    }
+
+    #[test]
+    fn test_keypress_from_ffi_unknown_code() {
+        let keypress: Result<CecKeypress, TryFromCecKeyPressError> = cec_keypress {
+            keycode: 666,
+            duration: 300,
+        }
+        .try_into();
+        assert_eq!(keypress, Err(TryFromCecKeyPressError::UnknownKeycode));
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CecDeviceTypeVec(ArrayVec<[CecDeviceType; 5]>);
+
+impl From<CecDeviceTypeVec> for cec_device_type_list {
+    fn from(device_types: CecDeviceTypeVec) -> cec_device_type_list {
+        let mut devices = cec_device_type_list {
+            types: [CecDeviceType::Reserved.to_u32().unwrap(); 5],
+        };
+        for (i, type_id) in device_types.0.iter().enumerate() {
+            devices.types[i] = (*type_id).to_u32().unwrap();
+        }
+        devices
+    }
+}
+
+#[cfg(test)]
+mod cec_device_type_vec_tests {
+    use super::*;
+
+    #[test]
+    fn test_to_ffi_empty() {
+        let devices = ArrayVec::new();
+        let ffi_devices: cec_device_type_list = CecDeviceTypeVec(devices).into();
+        assert_eq!(ffi_devices.types, [CecDeviceType::Reserved as u32; 5]);
+    }
+
+    #[test]
+    fn test_to_ffi_two_devices() {
+        let mut devices = ArrayVec::new();
+        devices.push(CecDeviceType::PlaybackDevice);
+        devices.push(CecDeviceType::RecordingDevice);
+        let ffi_devices: cec_device_type_list = CecDeviceTypeVec(devices).into();
+        assert_eq!(ffi_devices.types[0], CecDeviceType::PlaybackDevice as u32);
+        assert_eq!(ffi_devices.types[1], CecDeviceType::RecordingDevice as u32);
+        assert_eq!(ffi_devices.types[2..], [CecDeviceType::Reserved as u32; 3]);
     }
 }
 
@@ -340,11 +538,8 @@ static mut CALLBACKS: ICECCallbacks = ICECCallbacks {
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CecDeviceTypeVec(Vec<CecDeviceType>);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CecConfiguration {
-    pub device_name: CString, // FIXME: use rust types (be careful with \0)
+    pub device_name: String, // FIXME: use rust types (be careful with \0)
     #[doc = "< the device type(s) to use on the CEC bus for libCEC"]
     pub device_types: CecDeviceTypeVec,
     #[doc = "< (read only) set to 1 by libCEC when the physical address was autodetected"]
@@ -374,7 +569,7 @@ pub struct CecConfiguration {
     #[doc = "< (read-only) the firmware version of the adapter. added in 1.6.0"]
     pub firmware_version: Option<u16>,
     #[doc = "< the menu language used by the client. 3 character ISO 639-2 country code. see http://http://www.loc.gov/standards/iso639-2/ added in 1.6.2"]
-    pub device_language: Option<CString>, // FIXME: use rust types (be careful with \0)
+    pub device_language: Option<String>, // FIXME: use rust types (be careful with \0)
     #[doc = "< (read-only) the build date of the firmware, in seconds since epoch. if not available, this value will be set to 0. added in 1.6.2"]
     pub firmware_build_date_epoch_secs: Option<u32>,
     #[doc = "< won't allocate a CCECClient when starting the connection when set (same as monitor mode). added in 1.6.3"]
@@ -396,9 +591,9 @@ pub struct CecConfiguration {
 }
 
 impl CecConfiguration {
-    pub fn new(device_name: CString, device_types: CecDeviceTypeVec) -> CecConfiguration {
+    pub fn new(device_name: &str, device_types: CecDeviceTypeVec) -> CecConfiguration {
         Self {
-            device_name,
+            device_name: device_name.into(),
             device_types,
             autodetect_address: Default::default(),
             physical_address: Default::default(),
@@ -427,27 +622,16 @@ impl CecConfiguration {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum TryFromCecConfigurationError {
-    DeviceTypesError(TryFromCecDeviceTypeVecError),
-}
-
-impl TryFrom<CecConfiguration> for libcec_configuration {
-    type Error = TryFromCecConfigurationError;
-
-    fn try_from(config: CecConfiguration) -> Result<Self, Self::Error> {
+impl From<CecConfiguration> for libcec_configuration {
+    fn from(config: CecConfiguration) -> libcec_configuration {
         let mut cfg: libcec_configuration;
         unsafe {
             cfg = mem::zeroed::<libcec_configuration>();
             libcec_clear_configuration(&mut cfg);
         }
-        // TODO: handle Option
         cfg.clientVersion = LIBCEC_VERSION_CURRENT;
         cfg.strDeviceName = first_13(config.device_name); // FIXME: try_into
-        cfg.deviceTypes = config
-            .device_types
-            .try_into()
-            .map_err(TryFromCecConfigurationError::DeviceTypesError)?;
+        cfg.deviceTypes = config.device_types.into();
         if let Some(v) = config.autodetect_address {
             cfg.bAutodetectAddress = v.into();
         }
@@ -527,29 +711,7 @@ impl TryFrom<CecConfiguration> for libcec_configuration {
         if let Some(v) = config.autowake_avr {
             cfg.bAutoWakeAVR = v.into();
         }
-        Ok(cfg)
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum TryFromCecDeviceTypeVecError {
-    TooManyDevices,
-}
-
-impl TryFrom<CecDeviceTypeVec> for cec_device_type_list {
-    type Error = TryFromCecDeviceTypeVecError;
-    fn try_from(device_types: CecDeviceTypeVec) -> Result<Self, Self::Error> {
-        let mut devices = cec_device_type_list {
-            types: [CecDeviceType::Reserved.to_u32().unwrap(); 5],
-        };
-        if device_types.0.len() > devices.types.len() {
-            Err(TryFromCecDeviceTypeVecError::TooManyDevices)
-        } else {
-            for (i, type_id) in device_types.0.iter().enumerate() {
-                devices.types[i] = (*type_id).to_u32().unwrap();
-            }
-            Ok(devices)
-        }
+        cfg
     }
 }
 
@@ -577,7 +739,6 @@ pub type CecConnectionResult<T> = result::Result<T, CecConnectionResultError>;
 
 #[derive(Debug)]
 pub enum CecConnectionResultError {
-    InvalidConfiguration(TryFromCecConfigurationError),
     LibInitFailed,
     NoAdapterFound,
     AdapterOpenFailed,
@@ -587,10 +748,7 @@ pub enum CecConnectionResultError {
 
 impl CecConnection {
     pub fn new(config: CecConfiguration) -> CecConnectionResult<CecConnection> {
-        let cfg = &mut config
-            .clone()
-            .try_into()
-            .map_err(CecConnectionResultError::InvalidConfiguration)?;
+        let cfg = &mut config.clone().into();
         let conn: libcec_connection_t = unsafe { libcec_initialise(cfg) };
         if conn as usize == 0 {
             Err(CecConnectionResultError::LibInitFailed)
@@ -601,11 +759,12 @@ impl CecConnection {
 
     pub fn open(
         &self,
-        port: &CStr,
+        port: &str,
         open_timeout: u32,
         key_press_callback: Option<Box<FnKeyPress>>,
         command_received_callback: Option<Box<FnCommand>>,
     ) -> CecConnectionResult<()> {
+        let port = CString::new(port).expect("Invalid port name");
         if unsafe { libcec_open(self.conn, port.as_ptr(), open_timeout) } == 0 {
             return Err(CecConnectionResultError::AdapterOpenFailed);
         }
@@ -647,33 +806,6 @@ impl Drop for CecConnection {
         }
     }
 }
-
-// impl libcec_configuration {
-//     pub fn new(
-//         activate_source : bool,
-//         device_types: cec_device_type_list,
-//         callbacks: &'static mut ICECCallbacks,
-//     ) -> libcec_configuration {
-//         let mut cfg: libcec_configuration = Default::default();
-//         cfg.deviceTypes = device_types;
-//         cfg.callbacks = callbacks;
-//         cfg.bActivateSource = if activate_source { 1 } else { 0 };
-//         cfg
-//     }
-// }
-
-// impl Default for libcec_configuration {
-//     fn default() -> Self {
-//         let mut cfg: libcec_configuration;
-//         unsafe {
-//             cfg = mem::zeroed::<libcec_configuration>();
-//             libcec_clear_configuration(&mut cfg);
-//         }
-//         cfg.clientVersion = libcec_version::LIBCEC_VERSION_CURRENT as u32;
-//         cfg.bActivateSource = 0;
-//         cfg
-//     }
-// }
 
 #[cfg(test)]
 mod tests {
