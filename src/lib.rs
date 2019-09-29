@@ -21,9 +21,9 @@ fn interpret_u8_as_i8(i: u8) -> i8 {
     unsafe { std::mem::transmute(i) }
 }
 
-fn first_3(string: String) -> [i8; 3] {
+fn first_3(string: &str) -> [i8; 3] {
     let mut data: [i8; 3] = [0; 3];
-    let bytes = string.into_bytes();
+    let bytes = string.as_bytes();
     for (i, data_elem) in data.iter_mut().enumerate() {
         if let Some(c) = bytes.get(i) {
             *data_elem = interpret_u8_as_i8(*c)
@@ -32,9 +32,9 @@ fn first_3(string: String) -> [i8; 3] {
     data
 }
 
-fn first_13(string: String) -> [i8; 13] {
+fn first_13(string: &str) -> [i8; 13] {
     let mut data: [i8; 13] = [0; 13];
-    let bytes = string.into_bytes();
+    let bytes = string.as_bytes();
     for (i, data_elem) in data.iter_mut().enumerate() {
         if let Some(c) = bytes.get(i) {
             *data_elem = interpret_u8_as_i8(*c)
@@ -630,7 +630,7 @@ impl From<CecConfiguration> for libcec_configuration {
             libcec_clear_configuration(&mut cfg);
         }
         cfg.clientVersion = LIBCEC_VERSION_CURRENT;
-        cfg.strDeviceName = first_13(config.device_name); // FIXME: try_into
+        cfg.strDeviceName = first_13(&config.device_name); // FIXME: try_into
         cfg.deviceTypes = config.device_types.into();
         if let Some(v) = config.autodetect_address {
             cfg.bAutodetectAddress = v.into();
@@ -681,7 +681,7 @@ impl From<CecConfiguration> for libcec_configuration {
             cfg.iFirmwareVersion = v;
         }
         if let Some(v) = config.device_language {
-            cfg.strDeviceLanguage = first_3(v);
+            cfg.strDeviceLanguage = first_3(&v);
         }
         if let Some(v) = config.firmware_build_date_epoch_secs {
             cfg.iFirmwareBuildDate = v;
