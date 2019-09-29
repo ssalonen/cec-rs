@@ -518,7 +518,6 @@ extern "C" fn command_received_callback(
         callback = &mut (*rust_callbacks).command_received_callback;
         command_nonnull = *command_raw;
     }
-    // TODO: handle different commands, and parse payload accordingly in a type safe way?
     if let Some(rust_callback) = callback {
         if let Ok(command) = command_nonnull.try_into() {
             rust_callback(command);
@@ -538,7 +537,7 @@ static mut CALLBACKS: ICECCallbacks = ICECCallbacks {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CecConfiguration {
-    pub device_name: String, // FIXME: use rust types (be careful with \0)
+    pub device_name: String,
     #[doc = "< the device type(s) to use on the CEC bus for libCEC"]
     pub device_types: CecDeviceTypeVec,
     #[doc = "< (read only) set to 1 by libCEC when the physical address was autodetected"]
@@ -568,7 +567,7 @@ pub struct CecConfiguration {
     #[doc = "< (read-only) the firmware version of the adapter. added in 1.6.0"]
     pub firmware_version: Option<u16>,
     #[doc = "< the menu language used by the client. 3 character ISO 639-2 country code. see http://http://www.loc.gov/standards/iso639-2/ added in 1.6.2"]
-    pub device_language: Option<String>, // FIXME: use rust types (be careful with \0)
+    pub device_language: Option<String>,
     #[doc = "< (read-only) the build date of the firmware, in seconds since epoch. if not available, this value will be set to 0. added in 1.6.2"]
     pub firmware_build_date_epoch_secs: Option<u32>,
     #[doc = "< won't allocate a CCECClient when starting the connection when set (same as monitor mode). added in 1.6.3"]
@@ -629,7 +628,7 @@ impl From<CecConfiguration> for libcec_configuration {
             libcec_clear_configuration(&mut cfg);
         }
         cfg.clientVersion = LIBCEC_VERSION_CURRENT;
-        cfg.strDeviceName = first_13(&config.device_name); // FIXME: try_into
+        cfg.strDeviceName = first_13(&config.device_name);
         cfg.deviceTypes = config.device_types.into();
         if let Some(v) = config.autodetect_address {
             cfg.bAutodetectAddress = v.into();
@@ -647,12 +646,10 @@ impl From<CecConfiguration> for libcec_configuration {
             cfg.tvVendor = v;
         }
         if let Some(v) = config.wake_devices {
-            // TODO:
-            // cfg.wakeDevices = v.try_into();
+            cfg.wakeDevices = v.into();
         }
         if let Some(v) = config.power_off_devices {
-            // TODO:
-            // cfg.powerOffDevices = v.try_into();
+            cfg.powerOffDevices = v.into();
         }
         if let Some(v) = config.server_version {
             cfg.serverVersion = v;
@@ -666,15 +663,8 @@ impl From<CecConfiguration> for libcec_configuration {
         if let Some(v) = config.power_off_on_standby {
             cfg.bPowerOffOnStandby = v.into();
         }
-        // if let Some(v) = self.callback_param {
-        //     // cfg.callbackParam = v;
-        // }
-        // if let Some(v) = self.callbacks {
-        //     cfg.callbacks = v.into();
-        // }
         if let Some(v) = config.logical_addresses {
-            // TODO:
-            // cfg.logicalAddresses = v.try_into();
+            cfg.logicalAddresses = v.into();
         }
         if let Some(v) = config.firmware_version {
             cfg.iFirmwareVersion = v;
@@ -688,7 +678,6 @@ impl From<CecConfiguration> for libcec_configuration {
         if let Some(v) = config.monitor_only {
             cfg.bMonitorOnly = v.into();
         }
-        //cfg.cecVersion = cec_version;
         if let Some(v) = config.adapter_type {
             cfg.adapterType = v.to_u32().unwrap();
         }
