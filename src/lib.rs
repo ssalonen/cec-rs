@@ -1,5 +1,8 @@
+mod enums;
+
+pub use self::enums::*;
+
 use arrayvec::ArrayVec;
-use enums::{CecAdapterType, CecDeviceType, CecLogicalAddress, CecOpcode, CecUserControlCode};
 use libcec_sys::{
     cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_logical_addresses,
     libcec_clear_configuration, libcec_close, libcec_configuration, libcec_connection_t,
@@ -13,8 +16,6 @@ use std::ffi::CString;
 use std::os::raw::c_void;
 use std::time::Duration;
 use std::{mem, result};
-
-pub mod enums;
 
 fn interpret_u8_as_i8(i: u8) -> i8 {
     unsafe { std::mem::transmute(i) }
