@@ -17,27 +17,27 @@ use std::os::raw::c_void;
 use std::time::Duration;
 use std::{mem, result};
 
-fn interpret_u8_as_i8(i: u8) -> i8 {
+fn interpret_u8_as_char(i: u8) -> ::std::os::raw::c_char {
     unsafe { std::mem::transmute(i) }
 }
 
-fn first_3(string: &str) -> [i8; 3] {
-    let mut data: [i8; 3] = [0; 3];
+fn first_3(string: &str) -> [::std::os::raw::c_char; 3] {
+    let mut data: [::std::os::raw::c_char; 3] = [0; 3];
     let bytes = string.as_bytes();
     for (i, data_elem) in data.iter_mut().enumerate() {
         if let Some(c) = bytes.get(i) {
-            *data_elem = interpret_u8_as_i8(*c)
+            *data_elem = interpret_u8_as_char(*c)
         }
     }
     data
 }
 
-fn first_13(string: &str) -> [i8; 13] {
-    let mut data: [i8; 13] = [0; 13];
+fn first_13(string: &str) -> [::std::os::raw::c_char; 13] {
+    let mut data: [::std::os::raw::c_char; 13] = [0; 13];
     let bytes = string.as_bytes();
     for (i, data_elem) in data.iter_mut().enumerate() {
         if let Some(c) = bytes.get(i) {
-            *data_elem = interpret_u8_as_i8(*c)
+            *data_elem = interpret_u8_as_char(*c)
         }
     }
     data
@@ -440,6 +440,14 @@ mod keypress_tests {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CecDeviceTypeVec(ArrayVec<[CecDeviceType; 5]>);
 
+impl CecDeviceTypeVec {
+    pub fn new(type1: CecDeviceType) -> CecDeviceTypeVec {
+        let mut inner = ArrayVec::<[_; 5]>::new();
+        inner.push(type1);
+        CecDeviceTypeVec(inner)
+    }
+}
+
 impl From<CecDeviceTypeVec> for cec_device_type_list {
     fn from(device_types: CecDeviceTypeVec) -> cec_device_type_list {
         let mut devices = cec_device_type_list {
@@ -486,20 +494,14 @@ pub type FnCommand = dyn FnMut(CecCommand);
 pub type FnSourceActivated = dyn FnMut(CecLogicalAddress, bool);
 
 extern "C" fn key_press_callback(rust_callbacks: *mut c_void, keypress_raw: *const cec_keypress) {
-    if keypress_raw.is_null() {
-        return;
-    }
-    let rust_callbacks: *mut CecCallbacks = rust_callbacks as *mut CecCallbacks;
-    let callback: &mut Option<Box<FnKeyPress>>;
-    let keypress_nonnull: cec_keypress;
-    assert!(!rust_callbacks.is_null());
-    unsafe {
-        callback = &mut (*rust_callbacks).key_press_callback;
-        keypress_nonnull = *keypress_raw;
-    }
-    if let Some(rust_callback) = callback {
-        if let Ok(keypress) = keypress_nonnull.try_into() {
-            rust_callback(keypress);
+    let rust_callbacks: *mut CecCallbacks = rust_callbacks.cast();
+    if let Some(rust_callbacks) = unsafe { rust_callbacks.as_mut() } {
+        if let Some(keypress) = unsafe { keypress_raw.as_ref() } {
+            if let Some(rust_callback) = &mut rust_callbacks.key_press_callback {
+                if let Ok(keypress) = (*keypress).try_into() {
+                    rust_callback(keypress);
+                }
+            }
         }
     }
 }
@@ -508,20 +510,14 @@ extern "C" fn command_received_callback(
     rust_callbacks: *mut c_void,
     command_raw: *const cec_command,
 ) {
-    if command_raw.is_null() {
-        return;
-    }
-    let rust_callbacks: *mut CecCallbacks = rust_callbacks as *mut CecCallbacks;
-    let callback: &mut Option<Box<FnCommand>>;
-    let command_nonnull: cec_command;
-    assert!(!rust_callbacks.is_null());
-    unsafe {
-        callback = &mut (*rust_callbacks).command_received_callback;
-        command_nonnull = *command_raw;
-    }
-    if let Some(rust_callback) = callback {
-        if let Ok(command) = command_nonnull.try_into() {
-            rust_callback(command);
+    let rust_callbacks: *mut CecCallbacks = rust_callbacks.cast();
+    if let Some(rust_callbacks) = unsafe { rust_callbacks.as_mut() } {
+        if let Some(command) = unsafe { command_raw.as_ref() } {
+            if let Some(rust_callback) = &mut rust_callbacks.command_received_callback {
+                if let Ok(command) = (*command).try_into() {
+                    rust_callback(command);
+                }
+            }
         }
     }
 }
