@@ -47,8 +47,8 @@ deploy:
     file_glob: true
     file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
     on:
-        # which targets will generate binary releases
-        condition: $TRAVIS_RUST_VERSION = stable
+        # This is a library, do not deploy
+        condition: $DEPLOY = never
         tags: true
     provider: releases
     skip_cleanup: true
