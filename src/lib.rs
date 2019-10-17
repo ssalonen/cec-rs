@@ -1,6 +1,7 @@
 mod enums;
 
 pub use self::enums::*;
+use std::pin::Pin;
 
 use arrayvec::ArrayVec;
 use libcec_sys::{
@@ -717,6 +718,7 @@ impl CecCommand {
 
 pub struct CecConnection {
     conn: libcec_connection_t,
+    rust_callbacks: Option<Pin<Box<CecCallbacks>>>,
     pub config: CecConfiguration,
 }
 
@@ -738,17 +740,22 @@ impl CecConnection {
         if conn as usize == 0 {
             Err(CecConnectionResultError::LibInitFailed)
         } else {
-            Ok(CecConnection { conn, config })
+            Ok(CecConnection {
+                conn,
+                config,
+                rust_callbacks: None,
+            })
         }
     }
 
     pub fn open(
-        &self,
+        &mut self,
         port: &str,
         open_timeout: u32,
         key_press_callback: Option<Box<FnKeyPress>>,
         command_received_callback: Option<Box<FnCommand>>,
     ) -> CecConnectionResult<()> {
+        // TODO: panic if already opened
         let port = CString::new(port).expect("Invalid port name");
         if unsafe { libcec_open(self.conn, port.as_ptr(), open_timeout) } == 0 {
             return Err(CecConnectionResultError::AdapterOpenFailed);
@@ -765,15 +772,16 @@ impl CecConnection {
     }
 
     fn enable_callbacks(
-        &self,
+        &mut self,
         key_press_callback: Option<Box<dyn FnMut(CecKeypress)>>,
         command_received_callback: Option<Box<dyn FnMut(CecCommand)>>,
     ) -> CecConnectionResult<()> {
-        let mut rust_callbacks = CecCallbacks {
+        let pinned_callbacks = Box::pin(CecCallbacks {
             key_press_callback,
             command_received_callback,
-        };
-        let rust_callbacks_as_void_ptr = &mut rust_callbacks as *mut CecCallbacks as *mut c_void;
+        });
+        let rust_callbacks_as_void_ptr = &*pinned_callbacks as *const _ as *mut _;
+        self.rust_callbacks = Some(pinned_callbacks);
         if unsafe { libcec_enable_callbacks(self.conn, rust_callbacks_as_void_ptr, &mut CALLBACKS) }
             == 0
         {
