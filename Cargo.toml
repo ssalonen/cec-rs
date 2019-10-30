@@ -1,9 +1,18 @@
 [package]
 name = "cec-rs"
 version = "0.1.0"
-authors = ["salski"]
+authors = ["Sami Salonen"]
 edition = "2018"
 license = "GPL-2.0"
+description = "High level wrapper for libcec"
+#documentation = "https://docs.rs/TODO"
+readme = "README.md"
+#include = ["/README.md", "/LICENSE", "/Cargo.toml", "/src/*.rs"]
+keywords = ["libcec", "cec", "hdmi"]
+categories = ["api-bindings"]
+homepage = "https://github.com/ssalonen/cec-rs"
+repository = "https://github.com/ssalonen/cec-rs"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
