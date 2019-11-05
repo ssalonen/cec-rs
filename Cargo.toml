@@ -7,7 +7,7 @@ license = "GPL-2.0"
 description = "High level wrapper for libcec"
 #documentation = "https://docs.rs/TODO"
 readme = "README.md"
-#include = ["/README.md", "/LICENSE", "/Cargo.toml", "/src/*.rs"]
+include = ["/README.md", "/LICENSE", "/Cargo.toml", "/src/*.rs"]
 keywords = ["libcec", "cec", "hdmi"]
 categories = ["api-bindings"]
 homepage = "https://github.com/ssalonen/cec-rs"
@@ -23,4 +23,8 @@ arrayvec = "0.5.1"
 
 [dependencies.libcec-sys]
 version = "0.1.0"
-path = "../libcec-sys"
+
+
+[badges]
+travis-ci = { repository = "ssalonen/cec-rs", branch = "master" }
+maintenance = { status = "passively-maintained" }
