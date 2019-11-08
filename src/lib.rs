@@ -11,10 +11,10 @@ extern crate derive_builder;
 
 use arrayvec::ArrayVec;
 use libcec_sys::{
-    cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_logical_addresses,
-    libcec_audio_get_status, libcec_audio_mute, libcec_audio_toggle_mute, libcec_audio_unmute,
-    libcec_clear_configuration, libcec_close, libcec_configuration, libcec_connection_t,
-    libcec_destroy, libcec_enable_callbacks, libcec_get_active_source,
+    cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_logical_address,
+    cec_logical_addresses, libcec_audio_get_status, libcec_audio_mute, libcec_audio_toggle_mute,
+    libcec_audio_unmute, libcec_clear_configuration, libcec_close, libcec_configuration,
+    libcec_connection_t, libcec_destroy, libcec_enable_callbacks, libcec_get_active_source,
     libcec_get_device_power_status, libcec_initialise, libcec_is_active_source, libcec_mute_audio,
     libcec_open, libcec_power_on_devices, libcec_send_key_release, libcec_send_keypress,
     libcec_set_active_source, libcec_set_inactive_view, libcec_set_logical_address,
@@ -718,11 +718,15 @@ impl CecConnection {
         }
     }
 
-    pub fn get_active_source(&self) -> CecConnectionResult<()> {
-        if unsafe { libcec_get_active_source(self.1) } == 0 {
-            Err(CecConnectionResultError::TransmitFailed)
-        } else {
-            Ok(())
+    pub fn get_active_source(&self) -> CecLogicalAddress {
+        let active_raw: cec_logical_address = unsafe { libcec_get_active_source(self.1) };
+        let active = CecLogicalAddress::from_i32(active_raw);
+        match active {
+            Some(address) => address,
+            None => {
+                warn!("get_active_source: Could not convert logical address {} to rust enum. Returning Unknown", active_raw);
+                CecLogicalAddress::Unknown
+            }
         }
     }
 
