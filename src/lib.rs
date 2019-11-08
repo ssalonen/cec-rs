@@ -1,14 +1,25 @@
+#![feature(mem_take)]
+
 mod enums;
+
+use log::{info, trace, warn};
 
 pub use self::enums::*;
 use std::pin::Pin;
+#[macro_use]
+extern crate derive_builder;
 
 use arrayvec::ArrayVec;
 use libcec_sys::{
     cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_logical_addresses,
+    libcec_audio_get_status, libcec_audio_mute, libcec_audio_toggle_mute, libcec_audio_unmute,
     libcec_clear_configuration, libcec_close, libcec_configuration, libcec_connection_t,
-    libcec_destroy, libcec_enable_callbacks, libcec_initialise, libcec_open, libcec_transmit,
-    ICECCallbacks, LIBCEC_VERSION_CURRENT,
+    libcec_destroy, libcec_enable_callbacks, libcec_get_active_source,
+    libcec_get_device_power_status, libcec_initialise, libcec_is_active_source, libcec_mute_audio,
+    libcec_open, libcec_power_on_devices, libcec_send_key_release, libcec_send_keypress,
+    libcec_set_active_source, libcec_set_inactive_view, libcec_set_logical_address,
+    libcec_standby_devices, libcec_switch_monitoring, libcec_transmit, libcec_volume_down,
+    libcec_volume_up, ICECCallbacks, LIBCEC_VERSION_CURRENT,
 };
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::convert::TryFrom;
@@ -495,9 +506,11 @@ pub type FnCommand = dyn FnMut(CecCommand);
 pub type FnSourceActivated = dyn FnMut(CecLogicalAddress, bool);
 
 extern "C" fn key_press_callback(rust_callbacks: *mut c_void, keypress_raw: *const cec_keypress) {
+    trace!("key_press_callback");
     let rust_callbacks: *mut CecCallbacks = rust_callbacks.cast();
     if let Some(rust_callbacks) = unsafe { rust_callbacks.as_mut() } {
         if let Some(keypress) = unsafe { keypress_raw.as_ref() } {
+            trace!("CecCallbacks: keypress.keycode {}", keypress.keycode);
             if let Some(rust_callback) = &mut rust_callbacks.key_press_callback {
                 if let Ok(keypress) = (*keypress).try_into() {
                     rust_callback(keypress);
@@ -511,9 +524,14 @@ extern "C" fn command_received_callback(
     rust_callbacks: *mut c_void,
     command_raw: *const cec_command,
 ) {
+    trace!("command_received_callback");
     let rust_callbacks: *mut CecCallbacks = rust_callbacks.cast();
     if let Some(rust_callbacks) = unsafe { rust_callbacks.as_mut() } {
         if let Some(command) = unsafe { command_raw.as_ref() } {
+            trace!(
+                "command_received_callback: command.opcode {}",
+                command.opcode
+            );
             if let Some(rust_callback) = &mut rust_callbacks.command_received_callback {
                 if let Ok(command) = (*command).try_into() {
                     rust_callback(command);
@@ -533,93 +551,378 @@ static mut CALLBACKS: ICECCallbacks = ICECCallbacks {
     sourceActivated: Option::None,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CecConfiguration {
+#[derive(Builder)]
+#[builder(pattern = "owned")]
+pub struct CecConnectionCfg {
+    #[builder(default, setter(strip_option), pattern = "owned")]
+    pub key_press_callback: Option<Box<FnKeyPress>>,
+    #[builder(default, setter(strip_option), pattern = "owned")]
+    pub command_received_callback: Option<Box<FnCommand>>,
+
+    pub port: String,
+
+    #[builder(default = "Duration::from_secs(5)")]
+    pub open_timeout: Duration,
+
+    //
+    // cec_configuration items follow up
+    //
     pub device_name: String,
+
     #[doc = "< the device type(s) to use on the CEC bus for libCEC"]
     pub device_types: CecDeviceTypeVec,
+
+    // optional cec_configuration items follow
     #[doc = "< (read only) set to 1 by libCEC when the physical address was autodetected"]
+    #[builder(default, setter(strip_option))]
     pub autodetect_address: Option<bool>,
+
     #[doc = "< the physical address of the CEC adapter"]
+    #[builder(default, setter(strip_option))]
     pub physical_address: Option<u16>,
+
     #[doc = "< the logical address of the device to which the adapter is connected. only used when iPhysicalAddress = 0 or when the adapter doesn't support autodetection"]
+    #[builder(default, setter(strip_option))]
     pub base_device: Option<CecLogicalAddress>,
+
     #[doc = "< the HDMI port to which the adapter is connected. only used when iPhysicalAddress = 0 or when the adapter doesn't support autodetection"]
+    #[builder(default, setter(strip_option))]
     pub hdmi_port: Option<u8>,
+
     #[doc = "< override the vendor ID of the TV. leave this untouched to autodetect"]
+    #[builder(default, setter(strip_option))]
     pub tv_vendor: Option<u32>,
+
     #[doc = "< list of devices to wake when initialising libCEC or when calling PowerOnDevices() without any parameter."]
+    #[builder(default, setter(strip_option))]
     pub wake_devices: Option<CecLogicalAddresses>,
+
     #[doc = "< list of devices to power off when calling StandbyDevices() without any parameter."]
+    #[builder(default, setter(strip_option))]
     pub power_off_devices: Option<CecLogicalAddresses>,
+
     #[doc = "< the version number of the server. read-only"]
+    #[builder(default, setter(strip_option))]
     pub server_version: Option<u32>,
+
     #[doc = "< true to get the settings from the ROM (if set, and a v2 ROM is present), false to use these settings."]
+    #[builder(default, setter(strip_option))]
     pub get_settings_from_rom: Option<bool>,
+
     #[doc = "< make libCEC the active source on the bus when starting the player application"]
+    #[builder(default, setter(strip_option))]
     pub activate_source: Option<bool>,
+
     #[doc = "< put this PC in standby mode when the TV is switched off. only used when bShutdownOnStandby = 0"]
+    #[builder(default, setter(strip_option))]
     pub power_off_on_standby: Option<bool>,
+
     #[doc = "< (read-only) the current logical addresses. added in 1.5.3"]
+    #[builder(default, setter(strip_option))]
     pub logical_addresses: Option<CecLogicalAddresses>,
+
     #[doc = "< (read-only) the firmware version of the adapter. added in 1.6.0"]
+    #[builder(default, setter(strip_option))]
     pub firmware_version: Option<u16>,
+
     #[doc = "< the menu language used by the client. 3 character ISO 639-2 country code. see http://http://www.loc.gov/standards/iso639-2/ added in 1.6.2"]
+    #[builder(default, setter(strip_option))]
     pub device_language: Option<String>,
+
     #[doc = "< (read-only) the build date of the firmware, in seconds since epoch. if not available, this value will be set to 0. added in 1.6.2"]
+    #[builder(default, setter(strip_option))]
     pub firmware_build_date_epoch_secs: Option<u32>,
+
     #[doc = "< won't allocate a CCECClient when starting the connection when set (same as monitor mode). added in 1.6.3"]
+    #[builder(default, setter(strip_option))]
     pub monitor_only: Option<bool>,
+
     #[doc = "< type of the CEC adapter that we're connected to. added in 1.8.2"]
+    #[builder(default, setter(strip_option))]
     pub adapter_type: Option<CecAdapterType>,
+
     #[doc = "< key code that initiates combo keys. defaults to CEC_USER_CONTROL_CODE_F1_BLUE. CEC_USER_CONTROL_CODE_UNKNOWN to disable. added in 2.0.5"]
+    #[builder(default, setter(strip_option))]
     pub combo_key: Option<CecUserControlCode>,
+
     #[doc = "< timeout until the combo key is sent as normal keypress"]
+    #[builder(default, setter(strip_option))]
     pub combo_key_timeout: Option<Duration>,
+
     #[doc = "< rate at which buttons autorepeat. 0 means rely on CEC device"]
+    #[builder(default)]
+    #[builder(setter(strip_option))]
     pub button_repeat_rate: Option<Duration>,
+
     #[doc = "< duration after last update until a button is considered released"]
+    #[builder(default)]
+    #[builder(setter(strip_option))]
     pub button_release_delay: Option<Duration>,
+
     #[doc = "< prevent double taps within this timeout. defaults to 200ms. added in 4.0.0"]
+    #[builder(default)]
+    #[builder(setter(strip_option))]
     pub double_tap_timeout: Option<Duration>,
+
     #[doc = "< set to 1 to automatically waking an AVR when the source is activated. added in 4.0.0"]
+    #[builder(default)]
+    #[builder(setter(strip_option))]
     pub autowake_avr: Option<bool>,
 }
 
-impl CecConfiguration {
-    pub fn new(device_name: &str, device_types: CecDeviceTypeVec) -> CecConfiguration {
-        Self {
-            device_name: device_name.into(),
-            device_types,
-            autodetect_address: Default::default(),
-            physical_address: Default::default(),
-            base_device: Default::default(),
-            hdmi_port: Default::default(),
-            tv_vendor: Default::default(),
-            wake_devices: Default::default(),
-            power_off_devices: Default::default(),
-            server_version: Default::default(),
-            get_settings_from_rom: Default::default(),
-            activate_source: Default::default(),
-            power_off_on_standby: Default::default(),
-            logical_addresses: Default::default(),
-            firmware_version: Default::default(),
-            device_language: Default::default(),
-            firmware_build_date_epoch_secs: Default::default(),
-            monitor_only: Default::default(),
-            adapter_type: Default::default(),
-            combo_key: Default::default(),
-            combo_key_timeout: Default::default(),
-            button_repeat_rate: Default::default(),
-            button_release_delay: Default::default(),
-            double_tap_timeout: Default::default(),
-            autowake_avr: Default::default(),
+pub type CecConnectionResult<T> = result::Result<T, CecConnectionResultError>;
+
+#[derive(Debug)]
+pub enum CecConnectionResultError {
+    LibInitFailed,
+    NoAdapterFound,
+    AdapterOpenFailed,
+    CallbackRegistrationFailed,
+    TransmitFailed,
+}
+
+pub struct CecConnection(
+    pub CecConnectionCfg,
+    libcec_connection_t,
+    Pin<Box<CecCallbacks>>,
+);
+
+impl CecConnection {
+    pub fn transmit(&self, command: cec_command) -> CecConnectionResult<()> {
+        if unsafe { libcec_transmit(self.1, &command) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+    pub fn send_power_on_devices(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
+        if unsafe { libcec_power_on_devices(self.1, address as i32) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+    pub fn send_standby_devices(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
+        if unsafe { libcec_standby_devices(self.1, address as i32) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn set_active_source(&self, device_type: CecDeviceType) -> CecConnectionResult<()> {
+        if unsafe { libcec_set_active_source(self.1, device_type as u32) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn get_active_source(&self) -> CecConnectionResult<()> {
+        if unsafe { libcec_get_active_source(self.1) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn is_active_source(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
+        if unsafe { libcec_is_active_source(self.1, address as i32) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn get_device_power_status(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
+        if unsafe { libcec_get_device_power_status(self.1, address as i32) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+    pub fn send_keypress(
+        &self,
+        address: CecLogicalAddress,
+        key: CecUserControlCode,
+        wait: bool,
+    ) -> CecConnectionResult<()> {
+        if unsafe { libcec_send_keypress(self.1, address as i32, key as u32, wait as i32) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn send_key_release(
+        &self,
+        address: CecLogicalAddress,
+        wait: bool,
+    ) -> CecConnectionResult<()> {
+        if unsafe { libcec_send_key_release(self.1, address as i32, wait as i32) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn volume_up(&self, send_release: bool) -> CecConnectionResult<()> {
+        if unsafe { libcec_volume_up(self.1, send_release as i32) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn volume_down(&self, send_release: bool) -> CecConnectionResult<()> {
+        if unsafe { libcec_volume_down(self.1, send_release as i32) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn mute_audio(&self, send_release: bool) -> CecConnectionResult<()> {
+        if unsafe { libcec_mute_audio(self.1, send_release as i32) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn audio_toggle_mute(&self) -> CecConnectionResult<()> {
+        if unsafe { libcec_audio_toggle_mute(self.1) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn audio_mute(&self) -> CecConnectionResult<()> {
+        if unsafe { libcec_audio_mute(self.1) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn audio_unmute(&self) -> CecConnectionResult<()> {
+        if unsafe { libcec_audio_unmute(self.1) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn audio_get_status(&self) -> CecConnectionResult<()> {
+        if unsafe { libcec_audio_get_status(self.1) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn set_inactive_view(&self) -> CecConnectionResult<()> {
+        if unsafe { libcec_set_inactive_view(self.1) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn set_logical_address(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
+        if unsafe { libcec_set_logical_address(self.1, address as i32) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn switch_monitoring(&self, enable: bool) -> CecConnectionResult<()> {
+        if unsafe { libcec_switch_monitoring(self.1, enable as i32) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    // Unimplemented:
+    // extern DECLSPEC int libcec_set_physical_address(libcec_connection_t connection, uint16_t iPhysicalAddress);
+    // extern DECLSPEC int libcec_set_deck_control_mode(libcec_connection_t connection, CEC_NAMESPACE cec_deck_control_mode mode, int bSendUpdate);
+    // extern DECLSPEC int libcec_set_deck_info(libcec_connection_t connection, CEC_NAMESPACE cec_deck_info info, int bSendUpdate);
+    // extern DECLSPEC int libcec_set_menu_state(libcec_connection_t connection, CEC_NAMESPACE cec_menu_state state, int bSendUpdate);
+    // extern DECLSPEC int libcec_set_osd_string(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress, CEC_NAMESPACE cec_display_control duration, const char* strMessage);
+    // extern DECLSPEC CEC_NAMESPACE cec_version libcec_get_device_cec_version(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress);
+    // extern DECLSPEC int libcec_get_device_menu_language(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress, CEC_NAMESPACE cec_menu_language language);
+    // extern DECLSPEC uint32_t libcec_get_device_vendor_id(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress);
+    // extern DECLSPEC uint16_t libcec_get_device_physical_address(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress);
+    // extern DECLSPEC int libcec_poll_device(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress);
+    // extern DECLSPEC CEC_NAMESPACE cec_logical_addresses libcec_get_active_devices(libcec_connection_t connection);
+    // extern DECLSPEC int libcec_is_active_device(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address address);
+    // extern DECLSPEC int libcec_is_active_device_type(libcec_connection_t connection, CEC_NAMESPACE cec_device_type type);
+    // extern DECLSPEC int libcec_set_hdmi_port(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address baseDevice, uint8_t iPort);
+    // extern DECLSPEC int libcec_get_device_osd_name(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iAddress, CEC_NAMESPACE cec_osd_name name);
+    // extern DECLSPEC int libcec_set_stream_path_logical(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iAddress);
+    // extern DECLSPEC int libcec_set_stream_path_physical(libcec_connection_t connection, uint16_t iPhysicalAddress);
+    // extern DECLSPEC CEC_NAMESPACE cec_logical_addresses libcec_get_logical_addresses(libcec_connection_t connection);
+    // extern DECLSPEC int libcec_get_current_configuration(libcec_connection_t connection, CEC_NAMESPACE libcec_configuration* configuration);
+    // extern DECLSPEC int libcec_can_persist_configuration(libcec_connection_t connection);
+    // extern DECLSPEC int libcec_persist_configuration(libcec_connection_t connection, CEC_NAMESPACE libcec_configuration* configuration);
+    // extern DECLSPEC int libcec_set_configuration(libcec_connection_t connection, const CEC_NAMESPACE libcec_configuration* configuration);
+    // extern DECLSPEC void libcec_rescan_devices(libcec_connection_t connection);
+    // extern DECLSPEC int libcec_is_libcec_active_source(libcec_connection_t connection);
+    // extern DECLSPEC int libcec_get_device_information(libcec_connection_t connection, const char* strPort, CEC_NAMESPACE libcec_configuration* config, uint32_t iTimeoutMs);
+    // extern DECLSPEC const char* libcec_get_lib_info(libcec_connection_t connection);
+    // extern DECLSPEC void libcec_init_video_standalone(libcec_connection_t connection);
+    // extern DECLSPEC uint16_t libcec_get_adapter_vendor_id(libcec_connection_t connection);
+    // extern DECLSPEC uint16_t libcec_get_adapter_product_id(libcec_connection_t connection);
+    // extern DECLSPEC int8_t libcec_detect_adapters(libcec_connection_t connection, CEC_NAMESPACE cec_adapter_descriptor* deviceList, uint8_t iBufSize, const char* strDevicePath, int bQuickScan);
+}
+
+impl CecConnectionCfg {
+    pub fn open(mut self) -> CecConnectionResult<CecConnection> {
+        let mut cfg: libcec_configuration = (&self).into();
+        let pinned_callbacks = Box::pin(CecCallbacks {
+            key_press_callback: mem::take(&mut self.key_press_callback),
+            command_received_callback: mem::take(&mut self.command_received_callback),
+        });
+        let rust_callbacks_as_void_ptr = &*pinned_callbacks as *const _ as *mut _;
+        let port = CString::new(self.port.clone()).expect("Invalid port name");
+        let open_timeout = self.open_timeout.as_millis() as u32;
+        let connection = CecConnection(
+            self,
+            unsafe { libcec_initialise(&mut cfg) },
+            pinned_callbacks,
+        );
+        if connection.1 as usize == 0 {
+            return Err(CecConnectionResultError::LibInitFailed);
+        }
+
+        if unsafe { libcec_open(connection.1, port.as_ptr(), open_timeout) } == 0 {
+            return Err(CecConnectionResultError::AdapterOpenFailed);
+        }
+
+        if unsafe {
+            libcec_enable_callbacks(connection.1, rust_callbacks_as_void_ptr, &mut CALLBACKS)
+        } == 0
+        {
+            return Err(CecConnectionResultError::CallbackRegistrationFailed);
+        }
+        Ok(connection)
+    }
+}
+
+impl Drop for CecConnection {
+    fn drop(&mut self) {
+        unsafe {
+            libcec_close(self.1);
+            libcec_destroy(self.1);
         }
     }
 }
 
-impl From<CecConfiguration> for libcec_configuration {
-    fn from(config: CecConfiguration) -> libcec_configuration {
+impl From<&CecConnectionCfg> for libcec_configuration {
+    fn from(config: &CecConnectionCfg) -> libcec_configuration {
         let mut cfg: libcec_configuration;
         unsafe {
             cfg = mem::zeroed::<libcec_configuration>();
@@ -627,7 +930,7 @@ impl From<CecConfiguration> for libcec_configuration {
         }
         cfg.clientVersion = LIBCEC_VERSION_CURRENT;
         cfg.strDeviceName = first_13(&config.device_name);
-        cfg.deviceTypes = config.device_types.into();
+        cfg.deviceTypes = config.device_types.clone().into();
         if let Some(v) = config.autodetect_address {
             cfg.bAutodetectAddress = v.into();
         }
@@ -643,10 +946,10 @@ impl From<CecConfiguration> for libcec_configuration {
         if let Some(v) = config.tv_vendor {
             cfg.tvVendor = v;
         }
-        if let Some(v) = config.wake_devices {
+        if let Some(v) = config.wake_devices.clone() {
             cfg.wakeDevices = v.into();
         }
-        if let Some(v) = config.power_off_devices {
+        if let Some(v) = config.power_off_devices.clone() {
             cfg.powerOffDevices = v.into();
         }
         if let Some(v) = config.server_version {
@@ -661,13 +964,13 @@ impl From<CecConfiguration> for libcec_configuration {
         if let Some(v) = config.power_off_on_standby {
             cfg.bPowerOffOnStandby = v.into();
         }
-        if let Some(v) = config.logical_addresses {
+        if let Some(v) = config.logical_addresses.clone() {
             cfg.logicalAddresses = v.into();
         }
         if let Some(v) = config.firmware_version {
             cfg.iFirmwareVersion = v;
         }
-        if let Some(v) = config.device_language {
+        if let Some(v) = config.device_language.clone() {
             cfg.strDeviceLanguage = first_3(&v);
         }
         if let Some(v) = config.firmware_build_date_epoch_secs {
@@ -698,105 +1001,6 @@ impl From<CecConfiguration> for libcec_configuration {
             cfg.bAutoWakeAVR = v.into();
         }
         cfg
-    }
-}
-
-impl CecCommand {
-    // pub fn set_system_audio_mode(set_mode: bool, destination: CecLogicalAddress) -> cec_command {
-    //     cec_command {
-    //         initiator: cec_logical_address::CECDEVICE_UNKNOWN,
-    //         destination,
-    //         ack: 1,
-    //         eom: 1,
-    //         opcode: CecOpcode::SET_SYSTEM_AUDIO_MODE,
-    //         parameters: cec_datapacket::empty(),
-    //         opcode_set: if set_mode { 1 } else { 0 },
-    //         transmit_timeout: 1000,
-    //     }
-    // }
-}
-
-pub struct CecConnection {
-    conn: libcec_connection_t,
-    rust_callbacks: Option<Pin<Box<CecCallbacks>>>,
-    pub config: CecConfiguration,
-}
-
-pub type CecConnectionResult<T> = result::Result<T, CecConnectionResultError>;
-
-#[derive(Debug)]
-pub enum CecConnectionResultError {
-    LibInitFailed,
-    NoAdapterFound,
-    AdapterOpenFailed,
-    CallbackRegistrationFailed,
-    TransmitFailed,
-}
-
-impl CecConnection {
-    pub fn new(config: CecConfiguration) -> CecConnectionResult<CecConnection> {
-        let cfg = &mut config.clone().into();
-        let conn: libcec_connection_t = unsafe { libcec_initialise(cfg) };
-        if conn as usize == 0 {
-            Err(CecConnectionResultError::LibInitFailed)
-        } else {
-            Ok(CecConnection {
-                conn,
-                config,
-                rust_callbacks: None,
-            })
-        }
-    }
-
-    pub fn open(
-        &mut self,
-        port: &str,
-        open_timeout: u32,
-        key_press_callback: Option<Box<FnKeyPress>>,
-        command_received_callback: Option<Box<FnCommand>>,
-    ) -> CecConnectionResult<()> {
-        // TODO: panic if already opened
-        let port = CString::new(port).expect("Invalid port name");
-        if unsafe { libcec_open(self.conn, port.as_ptr(), open_timeout) } == 0 {
-            return Err(CecConnectionResultError::AdapterOpenFailed);
-        }
-        self.enable_callbacks(key_press_callback, command_received_callback)
-    }
-
-    pub fn transmit(&self, command: cec_command) -> CecConnectionResult<()> {
-        if unsafe { libcec_transmit(self.conn, &command) } == 0 {
-            Err(CecConnectionResultError::TransmitFailed)
-        } else {
-            Ok(())
-        }
-    }
-
-    fn enable_callbacks(
-        &mut self,
-        key_press_callback: Option<Box<dyn FnMut(CecKeypress)>>,
-        command_received_callback: Option<Box<dyn FnMut(CecCommand)>>,
-    ) -> CecConnectionResult<()> {
-        let pinned_callbacks = Box::pin(CecCallbacks {
-            key_press_callback,
-            command_received_callback,
-        });
-        let rust_callbacks_as_void_ptr = &*pinned_callbacks as *const _ as *mut _;
-        self.rust_callbacks = Some(pinned_callbacks);
-        if unsafe { libcec_enable_callbacks(self.conn, rust_callbacks_as_void_ptr, &mut CALLBACKS) }
-            == 0
-        {
-            return Err(CecConnectionResultError::CallbackRegistrationFailed);
-        }
-        Ok(())
-    }
-}
-
-impl Drop for CecConnection {
-    fn drop(&mut self) {
-        unsafe {
-            libcec_close(self.conn);
-            libcec_destroy(self.conn);
-        }
     }
 }
 

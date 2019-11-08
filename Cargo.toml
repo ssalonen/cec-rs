@@ -4,7 +4,7 @@ version = "0.1.1-alpha.0"
 authors = ["Sami Salonen"]
 edition = "2018"
 license = "GPL-2.0"
-description = "High level wrapper for libcec"
+description = "Thin but safe wrapper for libcec"
 #documentation = "https://docs.rs/TODO"
 readme = "README.md"
 include = ["/README.md", "/LICENSE", "/Cargo.toml", "/src/*.rs"]
@@ -20,6 +20,9 @@ repository = "https://github.com/ssalonen/cec-rs"
 num-traits = "0.2"
 num-derive = "0.3.0"
 arrayvec = "0.5.1"
+derive_builder = "0.9.0"
+log = "0.4"
+
 
 [dependencies.libcec-sys]
 version = "0.1.0"
