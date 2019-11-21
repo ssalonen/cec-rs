@@ -881,60 +881,14 @@ impl CecConnection {
     // extern DECLSPEC int8_t libcec_detect_adapters(libcec_connection_t connection, CEC_NAMESPACE cec_adapter_descriptor* deviceList, uint8_t iBufSize, const char* strDevicePath, int bQuickScan);
 }
 
-// Can be replaced with the following when mem::take is stable
-//
-//
-// let pinned_callbacks = Box::pin(CecCallbacks {
-//     key_press_callback: mem::take(&mut self.key_press_callback),
-//     command_received_callback: mem::take(&mut self.command_received_callback),
-// });
-fn move_callbacks(cfg: &mut CecConnectionCfg) -> Pin<Box<CecCallbacks>> {
-    let mut key_press_callback = None;
-    key_press_callback = std::mem::replace(&mut cfg.key_press_callback, key_press_callback);
-    let mut command_received_callback = None;
-    command_received_callback = std::mem::replace(
-        &mut cfg.command_received_callback,
-        command_received_callback,
-    );
-    Box::pin(CecCallbacks {
-        key_press_callback,
-        command_received_callback,
-    })
-}
-
-#[cfg(test)]
-mod move_callbacks_test {
-    use super::*;
-
-    fn on_key_press(_keypress: CecKeypress) {}
-
-    fn on_command_received(_command: CecCommand) {}
-
-    #[test]
-    fn test_from_ffi_full_size() {
-        let mut cfg = CecConnectionCfgBuilder::default()
-            .port("RPI".into())
-            .device_name("Hifiberry".into())
-            .key_press_callback(Box::new(on_key_press))
-            .command_received_callback(Box::new(on_command_received))
-            .device_types(CecDeviceTypeVec::new(CecDeviceType::AudioSystem))
-            .build()
-            .unwrap();
-        let callbacks = move_callbacks(&mut cfg);
-        let boxed = &*callbacks;
-
-        assert!(boxed.key_press_callback.is_some());
-        assert!(boxed.command_received_callback.is_some());
-
-        assert!(cfg.key_press_callback.is_none());
-        assert!(cfg.command_received_callback.is_none());
-    }
-}
-
 impl CecConnectionCfg {
     pub fn open(mut self) -> CecConnectionResult<CecConnection> {
         let mut cfg: libcec_configuration = (&self).into();
-        let pinned_callbacks = move_callbacks(&mut self);
+        // Consume self.*_callback and build CecCallbacks from those
+        let pinned_callbacks = Box::pin(CecCallbacks {
+            key_press_callback: std::mem::replace(&mut self.key_press_callback, None),
+            command_received_callback: std::mem::replace(&mut self.command_received_callback, None),
+        });
         let rust_callbacks_as_void_ptr = &*pinned_callbacks as *const _ as *mut _;
         let port = CString::new(self.port.clone()).expect("Invalid port name");
         let open_timeout = self.open_timeout.as_millis() as u32;
