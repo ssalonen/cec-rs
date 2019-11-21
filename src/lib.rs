@@ -882,6 +882,19 @@ impl CecConnection {
 }
 
 impl CecConnectionCfg {
+    /// Open connection to configuration represented by this object
+    ///
+    ///
+    /// # Errors
+    ///
+    /// Error is returned in following cases
+    /// - LibInitFailed: libcec_sys::libcec_initialise fails
+    /// - AdapterOpenFailed: libcec_sys::libcec_open fails
+    /// - CallbackRegistrationFailed: libcec_sys::libcec_enable_callbacks fails
+    ///
+    /// # Panics
+    ///
+    /// Panics if self.port contains internal 0 byte
     pub fn open(mut self) -> CecConnectionResult<CecConnection> {
         let mut cfg: libcec_configuration = (&self).into();
         // Consume self.*_callback and build CecCallbacks from those
