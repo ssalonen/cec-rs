@@ -4,7 +4,6 @@
 
 Thin but safe wrappers for libcec
 
-
 ## Example CLI application
 
 `/Cargo.toml`:
