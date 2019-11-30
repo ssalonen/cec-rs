@@ -1,6 +1,8 @@
 # cec-rs
 
 [![Build Status](https://www.travis-ci.org/ssalonen/cec-rs.svg?branch=master)](https://www.travis-ci.org/ssalonen/cec-rs)
+[![Crate](https://img.shields.io/crates/v/cec-rs.svg)](https://crates.io/crates/cec-rs)
+[![Documentation](https://docs.rs/cec-rs/badge.svg)](https://docs.rs/cec-rs)
 
 Thin but safe wrappers for libcec
 
