@@ -5,7 +5,7 @@ authors = ["Sami Salonen"]
 edition = "2018"
 license = "GPL-2.0"
 description = "Thin but safe wrapper for libcec"
-#documentation = "https://docs.rs/TODO"
+documentation = "https://docs.rs/cec-rs"
 readme = "README.md"
 include = ["/README.md", "/LICENSE", "/Cargo.toml", "/src/*.rs"]
 keywords = ["libcec", "cec", "hdmi"]
@@ -25,7 +25,7 @@ log = "0.4"
 
 
 [dependencies.libcec-sys]
-version = "0.1.0"
+version = "0.2.1"
 
 
 [badges]
