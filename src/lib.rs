@@ -571,10 +571,6 @@ pub struct CecConnectionCfg {
     pub device_types: CecDeviceTypeVec,
 
     // optional cec_configuration items follow
-    #[doc = "< (read only) set to 1 by libCEC when the physical address was autodetected"]
-    #[builder(default, setter(strip_option))]
-    pub autodetect_address: Option<bool>,
-
     #[doc = "< the physical address of the CEC adapter"]
     #[builder(default, setter(strip_option))]
     pub physical_address: Option<u16>,
@@ -599,10 +595,6 @@ pub struct CecConnectionCfg {
     #[builder(default, setter(strip_option))]
     pub power_off_devices: Option<CecLogicalAddresses>,
 
-    #[doc = "< the version number of the server. read-only"]
-    #[builder(default, setter(strip_option))]
-    pub server_version: Option<u32>,
-
     #[doc = "< true to get the settings from the ROM (if set, and a v2 ROM is present), false to use these settings."]
     #[builder(default, setter(strip_option))]
     pub get_settings_from_rom: Option<bool>,
@@ -615,21 +607,9 @@ pub struct CecConnectionCfg {
     #[builder(default, setter(strip_option))]
     pub power_off_on_standby: Option<bool>,
 
-    #[doc = "< (read-only) the current logical addresses. added in 1.5.3"]
-    #[builder(default, setter(strip_option))]
-    pub logical_addresses: Option<CecLogicalAddresses>,
-
-    #[doc = "< (read-only) the firmware version of the adapter. added in 1.6.0"]
-    #[builder(default, setter(strip_option))]
-    pub firmware_version: Option<u16>,
-
     #[doc = "< the menu language used by the client. 3 character ISO 639-2 country code. see http://http://www.loc.gov/standards/iso639-2/ added in 1.6.2"]
     #[builder(default, setter(strip_option))]
     pub device_language: Option<String>,
-
-    #[doc = "< (read-only) the build date of the firmware, in seconds since epoch. if not available, this value will be set to 0. added in 1.6.2"]
-    #[builder(default, setter(strip_option))]
-    pub firmware_build_date_epoch_secs: Option<u32>,
 
     #[doc = "< won't allocate a CCECClient when starting the connection when set (same as monitor mode). added in 1.6.3"]
     #[builder(default, setter(strip_option))]
@@ -947,9 +927,6 @@ impl From<&CecConnectionCfg> for libcec_configuration {
         cfg.clientVersion = LIBCEC_VERSION_CURRENT;
         cfg.strDeviceName = first_13(&config.device_name);
         cfg.deviceTypes = config.device_types.clone().into();
-        if let Some(v) = config.autodetect_address {
-            cfg.bAutodetectAddress = v.into();
-        }
         if let Some(v) = config.physical_address {
             cfg.iPhysicalAddress = v;
         }
@@ -968,9 +945,6 @@ impl From<&CecConnectionCfg> for libcec_configuration {
         if let Some(v) = config.power_off_devices.clone() {
             cfg.powerOffDevices = v.into();
         }
-        if let Some(v) = config.server_version {
-            cfg.serverVersion = v;
-        }
         if let Some(v) = config.get_settings_from_rom {
             cfg.bGetSettingsFromROM = v.into();
         }
@@ -980,17 +954,8 @@ impl From<&CecConnectionCfg> for libcec_configuration {
         if let Some(v) = config.power_off_on_standby {
             cfg.bPowerOffOnStandby = v.into();
         }
-        if let Some(v) = config.logical_addresses.clone() {
-            cfg.logicalAddresses = v.into();
-        }
-        if let Some(v) = config.firmware_version {
-            cfg.iFirmwareVersion = v;
-        }
         if let Some(v) = config.device_language.clone() {
             cfg.strDeviceLanguage = first_3(&v);
-        }
-        if let Some(v) = config.firmware_build_date_epoch_secs {
-            cfg.iFirmwareBuildDate = v;
         }
         if let Some(v) = config.monitor_only {
             cfg.bMonitorOnly = v.into();
