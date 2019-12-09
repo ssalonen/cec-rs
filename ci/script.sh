@@ -16,10 +16,7 @@ main() {
 
     # test that example builds
     for example in $(ls examples/); do
-        (
-            cd $example
-            cross check --target $TARGET
-        )
+        ( cd examples/$example && cross check --target $TARGET)        
     done
 }
 
