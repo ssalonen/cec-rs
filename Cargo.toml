@@ -1,6 +1,6 @@
 [package]
 name = 'cec-rs'
-version = "2.0.1-alpha.0"
+version = '2.0.1-alpha.0'
 authors = ['Sami Salonen']
 edition = '2018'
 license = 'GPL-2.0'
@@ -30,7 +30,7 @@ derive_builder = '0.9.0'
 num-traits = '0.2.11'
 
 [dependencies.libcec-sys]
-version = '0.2.1'
+version = '1.0.0'
 [badges.travis-ci]
 repository = 'ssalonen/cec-rs'
 branch = 'master'
