@@ -1,11 +1,13 @@
+extern crate enum_repr_derive;
+#[macro_use]
+extern crate derive_builder;
+
 mod enums;
 
 use log::{trace, warn};
 
 pub use self::enums::*;
 use std::pin::Pin;
-#[macro_use]
-extern crate derive_builder;
 
 use arrayvec::ArrayVec;
 use libcec_sys::{
@@ -19,9 +21,8 @@ use libcec_sys::{
     libcec_standby_devices, libcec_switch_monitoring, libcec_transmit, libcec_volume_down,
     libcec_volume_up, ICECCallbacks, LIBCEC_VERSION_CURRENT,
 };
-use num_traits::{FromPrimitive, ToPrimitive};
-use std::convert::TryFrom;
-use std::convert::TryInto;
+use num_traits::ToPrimitive;
+use std::convert::{TryFrom, TryInto};
 use std::ffi::CString;
 use std::os::raw::c_void;
 use std::time::Duration;
@@ -182,11 +183,11 @@ pub struct CecCommand {
 impl From<CecCommand> for cec_command {
     fn from(command: CecCommand) -> cec_command {
         cec_command {
-            initiator: command.initiator.to_i32().unwrap(),
-            destination: command.destination.to_i32().unwrap(),
+            initiator: command.initiator.into(),
+            destination: command.destination.into(),
             ack: command.ack.into(),
             eom: command.eom.into(),
-            opcode: command.opcode.to_u32().unwrap(),
+            opcode: command.opcode.into(),
             parameters: command.parameters.into(),
             opcode_set: command.opcode_set.into(),
             transmit_timeout: command.transmit_timeout.as_millis() as i32,
@@ -201,16 +202,16 @@ pub enum TryFromCecCommandError {
     UnknownDestination,
 }
 
-impl TryFrom<cec_command> for CecCommand {
+impl core::convert::TryFrom<cec_command> for CecCommand {
     type Error = TryFromCecCommandError;
 
     fn try_from(command: cec_command) -> std::result::Result<Self, Self::Error> {
-        let opcode =
-            CecOpcode::from_u32(command.opcode).ok_or(TryFromCecCommandError::UnknownOpcode)?;
-        let initiator = CecLogicalAddress::from_i32(command.initiator)
-            .ok_or(TryFromCecCommandError::UnknownInitiator)?;
-        let destination = CecLogicalAddress::from_i32(command.destination)
-            .ok_or(TryFromCecCommandError::UnknownDestination)?;
+        let opcode = CecOpcode::try_from(command.opcode)
+            .map_err(|_| TryFromCecCommandError::UnknownOpcode)?;
+        let initiator = CecLogicalAddress::try_from(command.initiator)
+            .map_err(|_| TryFromCecCommandError::UnknownInitiator)?;
+        let destination = CecLogicalAddress::try_from(command.destination)
+            .map_err(|_| TryFromCecCommandError::UnknownDestination)?;
         let parameters = command.parameters.into();
         let transmit_timeout = Duration::from_millis(if command.transmit_timeout < 0 {
             0
@@ -406,11 +407,11 @@ pub enum TryFromCecKeyPressError {
     UnknownKeycode,
 }
 
-impl TryFrom<cec_keypress> for CecKeypress {
+impl core::convert::TryFrom<cec_keypress> for CecKeypress {
     type Error = TryFromCecKeyPressError;
     fn try_from(keypress: cec_keypress) -> std::result::Result<Self, Self::Error> {
-        let keycode = CecUserControlCode::from_u32(keypress.keycode)
-            .ok_or(TryFromCecKeyPressError::UnknownKeycode)?;
+        let keycode = CecUserControlCode::try_from(keypress.keycode)
+            .map_err(|_| TryFromCecKeyPressError::UnknownKeycode)?;
         Ok(CecKeypress {
             keycode,
             duration: Duration::from_millis(keypress.duration.into()),
@@ -461,10 +462,10 @@ impl CecDeviceTypeVec {
 impl From<CecDeviceTypeVec> for cec_device_type_list {
     fn from(device_types: CecDeviceTypeVec) -> cec_device_type_list {
         let mut devices = cec_device_type_list {
-            types: [CecDeviceType::Reserved.to_u32().unwrap(); 5],
+            types: [CecDeviceType::Reserved.into(); 5],
         };
         for (i, type_id) in device_types.0.iter().enumerate() {
-            devices.types[i] = (*type_id).to_u32().unwrap();
+            devices.types[i] = (*type_id).into();
         }
         devices
     }
@@ -698,10 +699,9 @@ impl CecConnection {
 
     pub fn get_active_source(&self) -> CecLogicalAddress {
         let active_raw: cec_logical_address = unsafe { libcec_get_active_source(self.1) };
-        let active = CecLogicalAddress::from_i32(active_raw);
-        match active {
-            Some(address) => address,
-            None => {
+        match CecLogicalAddress::try_from(active_raw) {
+            Ok(address) => address,
+            Err(active_raw) => {
                 warn!("get_active_source: Could not convert logical address {} to rust enum. Returning Unknown", active_raw);
                 CecLogicalAddress::Unknown
             }
@@ -931,7 +931,7 @@ impl From<&CecConnectionCfg> for libcec_configuration {
             cfg.iPhysicalAddress = v;
         }
         if let Some(v) = config.base_device {
-            cfg.baseDevice = v.to_i32().unwrap();
+            cfg.baseDevice = v.into();
         }
         if let Some(v) = config.hdmi_port {
             cfg.iHDMIPort = v;
@@ -961,10 +961,10 @@ impl From<&CecConnectionCfg> for libcec_configuration {
             cfg.bMonitorOnly = v.into();
         }
         if let Some(v) = config.adapter_type {
-            cfg.adapterType = v.to_u32().unwrap();
+            cfg.adapterType = v.into();
         }
         if let Some(v) = config.combo_key {
-            cfg.comboKey = v.to_u32().unwrap();
+            cfg.comboKey = v.into();
         }
         if let Some(v) = config.combo_key_timeout {
             cfg.iComboKeyTimeoutMs = v.as_millis().to_u32().unwrap();

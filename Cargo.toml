@@ -1,33 +1,39 @@
 [package]
-name = "cec-rs"
-version = "1.1.2-alpha.0"
-authors = ["Sami Salonen"]
-edition = "2018"
-license = "GPL-2.0"
-description = "Thin but safe wrapper for libcec"
-documentation = "https://docs.rs/cec-rs"
-readme = "README.md"
-include = ["/README.md", "/LICENSE", "/Cargo.toml", "/src/*.rs"]
-keywords = ["libcec", "cec", "hdmi"]
-categories = ["api-bindings"]
-homepage = "https://github.com/ssalonen/cec-rs"
-repository = "https://github.com/ssalonen/cec-rs"
-
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+name = 'cec-rs'
+version = '1.1.2-alpha.0'
+authors = ['Sami Salonen']
+edition = '2018'
+license = 'GPL-2.0'
+description = 'Thin but safe wrapper for libcec'
+documentation = 'https://docs.rs/cec-rs'
+readme = 'README.md'
+include = [
+    '/README.md',
+    '/LICENSE',
+    '/Cargo.toml',
+    '/src/*.rs',
+]
+keywords = [
+    'libcec',
+    'cec',
+    'hdmi',
+]
+categories = ['api-bindings']
+homepage = 'https://github.com/ssalonen/cec-rs'
+repository = 'https://github.com/ssalonen/cec-rs'
 
 [dependencies]
-num-traits = "0.2"
-num-derive = "0.3.0"
-arrayvec = "0.5.1"
-derive_builder = "0.9.0"
-log = "0.4"
-
+arrayvec = '0.5.1'
+log = '0.4'
+enum-repr-derive = '0.1.2'
+derive_builder = '0.9.0'
+num-traits = '0.2.11'
 
 [dependencies.libcec-sys]
-version = "0.2.1"
+version = '0.2.1'
+[badges.travis-ci]
+repository = 'ssalonen/cec-rs'
+branch = 'master'
 
-
-[badges]
-travis-ci = { repository = "ssalonen/cec-rs", branch = "master" }
-maintenance = { status = "passively-maintained" }
+[badges.maintenance]
+status = 'passively-maintained'
