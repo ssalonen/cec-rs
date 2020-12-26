@@ -1,6 +1,6 @@
 [package]
 name = 'cec-rs'
-version = '2.1.0'
+version = '2.1.1-dev'
 authors = ['Sami Salonen']
 edition = '2018'
 license = 'GPL-2.0'
