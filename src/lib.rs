@@ -332,8 +332,8 @@ pub struct CecLogicalAddresses(pub ArrayVec<[CecLogicalAddress; 17]>);
 impl From<CecLogicalAddresses> for cec_logical_addresses {
     fn from(addresses: CecLogicalAddresses) -> cec_logical_addresses {
         let mut data = cec_logical_addresses {
-            primary: CecLogicalAddress::Unknown as i32,
-            addresses: [CecLogicalAddress::Unknown as i32; 16],
+            primary: CecLogicalAddress::Unregistered.into(),
+            addresses: [CecLogicalAddress::Unregistered.into(); 16],
         };
         let mut iter = addresses.0.iter().enumerate();
         if let Some((_, first)) = iter.next() {
@@ -354,10 +354,13 @@ mod logical_addresses_tests {
     fn test_to_ffi_no_address() {
         let addresses = ArrayVec::new();
         let ffi_addresses: cec_logical_addresses = CecLogicalAddresses(addresses).into();
-        assert_eq!(ffi_addresses.primary, CecLogicalAddress::Unknown as i32);
+        assert_eq!(
+            ffi_addresses.primary,
+            CecLogicalAddress::Unregistered as i32
+        );
         assert_eq!(
             ffi_addresses.addresses,
-            [CecLogicalAddress::Unknown as i32; 16]
+            [CecLogicalAddress::Unregistered as i32; 16]
         )
     }
 
@@ -372,7 +375,7 @@ mod logical_addresses_tests {
         );
         assert_eq!(
             ffi_addresses.addresses,
-            [CecLogicalAddress::Unknown as i32; 16]
+            [CecLogicalAddress::Unregistered as i32; 16]
         )
     }
 
@@ -390,7 +393,10 @@ mod logical_addresses_tests {
         let ffi_secondary = ffi_addresses.addresses;
         assert_eq!(ffi_secondary[0], CecLogicalAddress::Playbackdevice2 as i32);
         assert_eq!(ffi_secondary[1], CecLogicalAddress::Audiosystem as i32);
-        assert_eq!(ffi_secondary[2..], [CecLogicalAddress::Unknown as i32; 14]);
+        assert_eq!(
+            ffi_secondary[2..],
+            [CecLogicalAddress::Unregistered as i32; 14]
+        );
     }
 }
 
