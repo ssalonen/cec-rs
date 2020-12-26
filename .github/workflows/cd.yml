@@ -11,6 +11,8 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@master
+            - name: Install libudev for cargo publish. Needed by libcec build
+              run: sudo apt-get install libudev-dev
             - uses: actions-rs/toolchain@v1
               with:
                   toolchain: stable
