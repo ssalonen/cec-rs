@@ -1,8 +1,8 @@
 # cec-rs
 
-[![Crates.io](https://img.shields.io/crates/v/libcec-sys.svg)](https://crates.io/crates/libcec-sys)
-[![Docs.rs](https://docs.rs/libcec-sys/badge.svg)](https://docs.rs/libcec-sys)
-[![CI](https://github.com/ssalonen/libcec-sys/workflows/Continuous%20Integration/badge.svg)](https://github.com/ssalonen/libcec-sys/actions)
+[![Crates.io](https://img.shields.io/crates/v/cec-rs.svg)](https://crates.io/crates/cec-rs)
+[![Docs.rs](https://docs.rs/cec-rs/badge.svg)](https://docs.rs/cec-rs)
+[![CI](https://github.com/ssalonen/cec-rs/workflows/Continuous%20Integration/badge.svg)](https://github.com/ssalonen/cec-rs/actions)
 [![Coverage Status](https://coveralls.io/repos/github/ssalonen/cec-rs/badge.svg?branch=master)](https://coveralls.io/github/ssalonen/cec-rs?branch=master)
 
 Thin but safe wrappers for libcec
