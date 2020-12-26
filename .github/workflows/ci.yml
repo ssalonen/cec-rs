@@ -100,8 +100,8 @@ jobs:
         steps:
             - name: Checkout repository
               uses: actions/checkout@v2
-            - name: Install libudev for cargo publish. Needed by libcec build
-              run: sudo apt-get install libudev-dev
+            - name: Install dependencies for build and coverage
+              run: sudo apt-get install libudev-dev libcec
             - name: Install stable toolchain
               uses: actions-rs/toolchain@v1
               with:
