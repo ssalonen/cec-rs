@@ -501,13 +501,13 @@ mod cec_device_type_vec_tests {
 }
 
 struct CecCallbacks {
-    pub key_press_callback: Option<Box<dyn FnMut(CecKeypress)>>,
-    pub command_received_callback: Option<Box<dyn FnMut(CecCommand)>>,
+    pub key_press_callback: Option<Box<dyn FnMut(CecKeypress) + Send>>,
+    pub command_received_callback: Option<Box<dyn FnMut(CecCommand) + Send>>,
     // pub onSourceActivated: FnSourceActivated,
 }
 
-pub type FnKeyPress = dyn FnMut(CecKeypress);
-pub type FnCommand = dyn FnMut(CecCommand);
+pub type FnKeyPress = dyn FnMut(CecKeypress) + Send;
+pub type FnCommand = dyn FnMut(CecCommand) + Send;
 pub type FnSourceActivated = dyn FnMut(CecLogicalAddress, bool);
 
 extern "C" fn key_press_callback(rust_callbacks: *mut c_void, keypress_raw: *const cec_keypress) {
