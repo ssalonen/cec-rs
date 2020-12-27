@@ -7,7 +7,7 @@ mod enums;
 use log::{trace, warn};
 
 pub use self::enums::*;
-use std::pin::Pin;
+use std::{collections::HashSet, pin::Pin};
 
 use arrayvec::ArrayVec;
 use libcec_sys::{
@@ -52,6 +52,67 @@ fn first_13(string: &str) -> [::std::os::raw::c_char; 13] {
         }
     }
     data
+}
+
+/// CecLogicalAddress which does not allow Unknown variant
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct KnownCecLogicalAddress(CecLogicalAddress);
+
+impl KnownCecLogicalAddress {
+    pub fn new(address: CecLogicalAddress) -> Option<Self> {
+        match address {
+            CecLogicalAddress::Unknown => None,
+            valid_address => Some(Self(valid_address)),
+        }
+    }
+}
+
+impl From<KnownCecLogicalAddress> for CecLogicalAddress {
+    fn from(address: KnownCecLogicalAddress) -> Self {
+        address.0
+    }
+}
+
+impl From<KnownCecLogicalAddress> for cec_logical_address {
+    fn from(address: KnownCecLogicalAddress) -> Self {
+        address.0.into()
+    }
+}
+
+/// CecLogicalAddress which does not allow Unknown and Unregistered variants
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct KnownAndRegisteredCecLogicalAddress(CecLogicalAddress);
+
+impl KnownAndRegisteredCecLogicalAddress {
+    pub fn new(address: CecLogicalAddress) -> Option<Self> {
+        match address {
+            CecLogicalAddress::Unknown | CecLogicalAddress::Unregistered => None,
+            valid_address => Some(Self(valid_address)),
+        }
+    }
+}
+
+impl From<KnownAndRegisteredCecLogicalAddress> for CecLogicalAddress {
+    fn from(address: KnownAndRegisteredCecLogicalAddress) -> Self {
+        address.0
+    }
+}
+
+impl From<KnownAndRegisteredCecLogicalAddress> for cec_logical_address {
+    fn from(address: KnownAndRegisteredCecLogicalAddress) -> Self {
+        address.0.into()
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct UnregisteredCecLogicalAddress {}
+impl TryFrom<KnownCecLogicalAddress> for KnownAndRegisteredCecLogicalAddress {
+    type Error = UnregisteredCecLogicalAddress;
+
+    fn try_from(address: KnownCecLogicalAddress) -> Result<Self, Self::Error> {
+        let unchecked_address = address.0;
+        Self::new(unchecked_address).ok_or(Self::Error {})
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -325,24 +386,80 @@ mod command_tests {
     }
 }
 
-/// List
+/// Collection of logical addresses, with one primary address
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CecLogicalAddresses(pub ArrayVec<[CecLogicalAddress; 17]>);
+pub struct CecLogicalAddresses {
+    primary: KnownCecLogicalAddress,
+    addresses: HashSet<KnownAndRegisteredCecLogicalAddress>,
+}
+
+impl CecLogicalAddresses {
+    pub fn with_only_primary(primary: &KnownCecLogicalAddress) -> CecLogicalAddresses {
+        CecLogicalAddresses {
+            primary: primary.clone(),
+            addresses: HashSet::new(),
+        }
+    }
+    /// Create CecLogicalAddresses from primary address and secondary addresses    
+    ///
+    /// # Arguments
+    ///
+    /// * `primary` - Primary address to use
+    /// * `addresses` - other addresses to use. Primary is added to the set if not yet present
+    ///
+    /// Returns `None` in the following cases
+    /// * when primary is `Unregistered` and `addresses` is non-empty
+    ///
+    pub fn with_primary_and_addresses(
+        primary: &KnownCecLogicalAddress,
+        addresses: &HashSet<KnownAndRegisteredCecLogicalAddress>,
+    ) -> Option<CecLogicalAddresses> {
+        match primary.clone().into() {
+            // Invalid: Primary must be set if there are addresses
+            CecLogicalAddress::Unregistered if addresses.len() > 0 => None,
+            // Empty
+            CecLogicalAddress::Unregistered => Some(CecLogicalAddresses::default()),
+            // Non-empty
+            _ => {
+                let mut cloned_addresses = addresses.clone();
+                // Following cannot panic since primary is not representing Unregistered
+                let registered_address: KnownAndRegisteredCecLogicalAddress =
+                    primary.clone().try_into().unwrap();
+                // We ensure that addresses always contains the primary
+                cloned_addresses.insert(registered_address);
+                Some(CecLogicalAddresses {
+                    primary: primary.clone(),
+                    addresses: cloned_addresses,
+                })
+            }
+        }
+    }
+}
 
 impl From<CecLogicalAddresses> for cec_logical_addresses {
     fn from(addresses: CecLogicalAddresses) -> cec_logical_addresses {
+        // cec_logical_addresses.addresses is a 'mask'
+        // cec_logical_addresses.addresses[logical_address value] = 1 when mask contains the address
         let mut data = cec_logical_addresses {
-            primary: CecLogicalAddress::Unregistered.into(),
-            addresses: [CecLogicalAddress::Unregistered.into(); 16],
+            primary: addresses.primary.into(),
+            addresses: [0; 16],
         };
-        let mut iter = addresses.0.iter().enumerate();
-        if let Some((_, first)) = iter.next() {
-            data.primary = (*first).into();
-        }
-        for (i, address) in iter {
-            data.addresses[i - 1] = (*address).into();
+        let mut iter = addresses.addresses.iter();
+        while let Some(known_address) = iter.next() {
+            let address: CecLogicalAddress = (*known_address).into();
+            let address_mask_position: i32 = address.into();
+            data.addresses[address_mask_position as usize] = 1;
         }
         data
+    }
+}
+
+impl Default for CecLogicalAddresses {
+    fn default() -> Self {
+        CecLogicalAddresses {
+            primary: KnownCecLogicalAddress::new(CecLogicalAddress::Unregistered).unwrap(),
+            addresses: HashSet::new(),
+        }
     }
 }
 
@@ -351,51 +468,130 @@ mod logical_addresses_tests {
     use super::*;
 
     #[test]
+    fn test_known_address() {
+        assert_eq!(
+            Some(KnownCecLogicalAddress(CecLogicalAddress::Audiosystem)),
+            KnownCecLogicalAddress::new(CecLogicalAddress::Audiosystem)
+        );
+        assert_eq!(
+            Some(KnownCecLogicalAddress(CecLogicalAddress::Unregistered)),
+            KnownCecLogicalAddress::new(CecLogicalAddress::Unregistered)
+        );
+        assert_eq!(
+            None,
+            KnownCecLogicalAddress::new(CecLogicalAddress::Unknown)
+        );
+    }
+
+    #[test]
+    fn test_known_and_registered_address() {
+        assert_eq!(
+            Some(KnownAndRegisteredCecLogicalAddress(
+                CecLogicalAddress::Audiosystem
+            )),
+            KnownAndRegisteredCecLogicalAddress::new(CecLogicalAddress::Audiosystem)
+        );
+        assert_eq!(
+            None,
+            KnownAndRegisteredCecLogicalAddress::new(CecLogicalAddress::Unregistered)
+        );
+        assert_eq!(
+            None,
+            KnownAndRegisteredCecLogicalAddress::new(CecLogicalAddress::Unknown)
+        );
+    }
+
+    #[test]
     fn test_to_ffi_no_address() {
-        let addresses = ArrayVec::new();
-        let ffi_addresses: cec_logical_addresses = CecLogicalAddresses(addresses).into();
+        let ffi_addresses: cec_logical_addresses = CecLogicalAddresses::default().into();
         assert_eq!(
             ffi_addresses.primary,
             CecLogicalAddress::Unregistered.into()
         );
-        assert_eq!(
-            ffi_addresses.addresses,
-            [CecLogicalAddress::Unregistered.into(); 16]
-        )
+        assert_eq!(ffi_addresses.addresses, [0; 16])
     }
 
     #[test]
     fn test_to_ffi_one_address() {
-        let mut addresses = ArrayVec::new();
-        addresses.push(CecLogicalAddress::Playbackdevice1);
-        let ffi_addresses: cec_logical_addresses = CecLogicalAddresses(addresses).into();
+        let ffi_addresses: cec_logical_addresses = CecLogicalAddresses::with_only_primary(
+            &KnownCecLogicalAddress::new(CecLogicalAddress::Playbackdevice1).unwrap(),
+        )
+        .into();
         assert_eq!(
             ffi_addresses.primary,
             CecLogicalAddress::Playbackdevice1.into()
         );
-        assert_eq!(
-            ffi_addresses.addresses,
-            [CecLogicalAddress::Unregistered.into(); 16]
-        )
+        // addresses mask should be all zeros
+        assert_eq!(ffi_addresses.addresses, [0; 16])
     }
 
     #[test]
     fn test_to_ffi_three_address() {
-        let mut addresses = ArrayVec::new();
-        addresses.push(CecLogicalAddress::Playbackdevice1);
-        addresses.push(CecLogicalAddress::Playbackdevice2);
-        addresses.push(CecLogicalAddress::Audiosystem);
-        let ffi_addresses: cec_logical_addresses = CecLogicalAddresses(addresses).into();
+        let mut others = HashSet::new();
+        others.insert(
+            KnownAndRegisteredCecLogicalAddress::new(CecLogicalAddress::Playbackdevice2).unwrap(),
+        );
+        others.insert(
+            KnownAndRegisteredCecLogicalAddress::new(CecLogicalAddress::Audiosystem).unwrap(),
+        );
+
+        let non_ffi = CecLogicalAddresses::with_primary_and_addresses(
+            &KnownCecLogicalAddress::new(CecLogicalAddress::Playbackdevice1).unwrap(),
+            &others,
+        )
+        .unwrap();
+
+        let ffi_addresses: cec_logical_addresses = non_ffi.clone().into();
+
         assert_eq!(
             ffi_addresses.primary,
             CecLogicalAddress::Playbackdevice1.into()
         );
         let ffi_secondary = ffi_addresses.addresses;
-        assert_eq!(ffi_secondary[0], CecLogicalAddress::Playbackdevice2.into());
-        assert_eq!(ffi_secondary[1], CecLogicalAddress::Audiosystem.into());
+        const PRIMARY_INDEX: usize = CecLogicalAddress::Playbackdevice1 as usize;
+        const PLAYBACKDEVICE2_INDEX: usize = CecLogicalAddress::Playbackdevice2 as usize;
+        const AUDIOSYSTEM_INDEX: usize = CecLogicalAddress::Audiosystem as usize;
+        for (mask_index, mask_value) in ffi_secondary.iter().enumerate() {
+            match mask_index {
+                // Note: also the primary address is in the mask even though it was not provided originally
+                PLAYBACKDEVICE2_INDEX | AUDIOSYSTEM_INDEX | PRIMARY_INDEX => {
+                    assert_eq!(
+                        1, *mask_value,
+                        "index {}, non-ffi addresses {:?}, ffi addresses {:?}",
+                        mask_index, non_ffi, ffi_addresses
+                    )
+                }
+                _ => assert_eq!(0, *mask_value),
+            }
+        }
+    }
+    #[test]
+    fn test_unregistered_primary_no_others() {
+        let expected = Some(CecLogicalAddresses::with_only_primary(
+            &KnownCecLogicalAddress::new(CecLogicalAddress::Unregistered).unwrap(),
+        ));
         assert_eq!(
-            ffi_secondary[2..],
-            [CecLogicalAddress::Unregistered.into(); 14]
+            expected,
+            CecLogicalAddresses::with_primary_and_addresses(
+                &KnownCecLogicalAddress::new(CecLogicalAddress::Unregistered).unwrap(),
+                &HashSet::new(),
+            )
+        );
+    }
+
+    #[test]
+    fn test_unregistered_primary_some_others() {
+        let mut others = HashSet::new();
+        others.insert(
+            KnownAndRegisteredCecLogicalAddress::new(CecLogicalAddress::Audiosystem).unwrap(),
+        );
+        // If there are others, there should be also primary
+        assert_eq!(
+            None,
+            CecLogicalAddresses::with_primary_and_addresses(
+                &KnownCecLogicalAddress::new(CecLogicalAddress::Unregistered).unwrap(),
+                &others,
+            )
         );
     }
 }
@@ -988,13 +1184,5 @@ impl From<&CecConnectionCfg> for libcec_configuration {
             cfg.bAutoWakeAVR = v.into();
         }
         cfg
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
     }
 }
