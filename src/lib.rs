@@ -282,10 +282,10 @@ mod command_tests {
             ffi_command,
             cec_command {
                 ack: 0,
-                destination: CecLogicalAddress::Playbackdevice2 as i32,
+                destination: CecLogicalAddress::Playbackdevice2.into(),
                 eom: 1,
-                initiator: CecLogicalAddress::Playbackdevice1 as i32,
-                opcode: CecOpcode::ClearAnalogueTimer as u32,
+                initiator: CecLogicalAddress::Playbackdevice1.into(),
+                opcode: CecOpcode::ClearAnalogueTimer.into(),
                 opcode_set: 1,
                 parameters: CecDatapacket(parameters).into(), // OK to use here, verified in CecDatapacket unit tests
                 transmit_timeout: 65_000,
@@ -300,10 +300,10 @@ mod command_tests {
         parameters.push(3);
         let ffi_command = cec_command {
             ack: 0,
-            destination: CecLogicalAddress::Playbackdevice2 as i32,
+            destination: CecLogicalAddress::Playbackdevice2.into(),
             eom: 1,
-            initiator: CecLogicalAddress::Playbackdevice1 as i32,
-            opcode: CecOpcode::ClearAnalogueTimer as u32,
+            initiator: CecLogicalAddress::Playbackdevice1.into(),
+            opcode: CecOpcode::ClearAnalogueTimer.into(),
             opcode_set: 1,
             parameters: CecDatapacket(parameters.clone()).into(), // OK to use here, verified in CecDatapacket unit tests
             transmit_timeout: 65_000,
@@ -337,10 +337,10 @@ impl From<CecLogicalAddresses> for cec_logical_addresses {
         };
         let mut iter = addresses.0.iter().enumerate();
         if let Some((_, first)) = iter.next() {
-            data.primary = *first as i32;
+            data.primary = (*first).into();
         }
         for (i, address) in iter {
-            data.addresses[i - 1] = *address as i32;
+            data.addresses[i - 1] = (*address).into();
         }
         data
     }
@@ -356,11 +356,11 @@ mod logical_addresses_tests {
         let ffi_addresses: cec_logical_addresses = CecLogicalAddresses(addresses).into();
         assert_eq!(
             ffi_addresses.primary,
-            CecLogicalAddress::Unregistered as i32
+            CecLogicalAddress::Unregistered.into()
         );
         assert_eq!(
             ffi_addresses.addresses,
-            [CecLogicalAddress::Unregistered as i32; 16]
+            [CecLogicalAddress::Unregistered.into(); 16]
         )
     }
 
@@ -371,11 +371,11 @@ mod logical_addresses_tests {
         let ffi_addresses: cec_logical_addresses = CecLogicalAddresses(addresses).into();
         assert_eq!(
             ffi_addresses.primary,
-            CecLogicalAddress::Playbackdevice1 as i32
+            CecLogicalAddress::Playbackdevice1.into()
         );
         assert_eq!(
             ffi_addresses.addresses,
-            [CecLogicalAddress::Unregistered as i32; 16]
+            [CecLogicalAddress::Unregistered.into(); 16]
         )
     }
 
@@ -388,14 +388,14 @@ mod logical_addresses_tests {
         let ffi_addresses: cec_logical_addresses = CecLogicalAddresses(addresses).into();
         assert_eq!(
             ffi_addresses.primary,
-            CecLogicalAddress::Playbackdevice1 as i32
+            CecLogicalAddress::Playbackdevice1.into()
         );
         let ffi_secondary = ffi_addresses.addresses;
-        assert_eq!(ffi_secondary[0], CecLogicalAddress::Playbackdevice2 as i32);
-        assert_eq!(ffi_secondary[1], CecLogicalAddress::Audiosystem as i32);
+        assert_eq!(ffi_secondary[0], CecLogicalAddress::Playbackdevice2.into());
+        assert_eq!(ffi_secondary[1], CecLogicalAddress::Audiosystem.into());
         assert_eq!(
             ffi_secondary[2..],
-            [CecLogicalAddress::Unregistered as i32; 14]
+            [CecLogicalAddress::Unregistered.into(); 14]
         );
     }
 }
@@ -485,7 +485,7 @@ mod cec_device_type_vec_tests {
     fn test_to_ffi_empty() {
         let devices = ArrayVec::new();
         let ffi_devices: cec_device_type_list = CecDeviceTypeVec(devices).into();
-        assert_eq!(ffi_devices.types, [CecDeviceType::Reserved as u32; 5]);
+        assert_eq!(ffi_devices.types, [CecDeviceType::Reserved.into(); 5]);
     }
 
     #[test]
@@ -494,9 +494,9 @@ mod cec_device_type_vec_tests {
         devices.push(CecDeviceType::PlaybackDevice);
         devices.push(CecDeviceType::RecordingDevice);
         let ffi_devices: cec_device_type_list = CecDeviceTypeVec(devices).into();
-        assert_eq!(ffi_devices.types[0], CecDeviceType::PlaybackDevice as u32);
-        assert_eq!(ffi_devices.types[1], CecDeviceType::RecordingDevice as u32);
-        assert_eq!(ffi_devices.types[2..], [CecDeviceType::Reserved as u32; 3]);
+        assert_eq!(ffi_devices.types[0], CecDeviceType::PlaybackDevice.into());
+        assert_eq!(ffi_devices.types[1], CecDeviceType::RecordingDevice.into());
+        assert_eq!(ffi_devices.types[2..], [CecDeviceType::Reserved.into(); 3]);
     }
 }
 
@@ -681,14 +681,14 @@ impl CecConnection {
         }
     }
     pub fn send_power_on_devices(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
-        if unsafe { libcec_power_on_devices(self.1, address as i32) } == 0 {
+        if unsafe { libcec_power_on_devices(self.1, address.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
         }
     }
     pub fn send_standby_devices(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
-        if unsafe { libcec_standby_devices(self.1, address as i32) } == 0 {
+        if unsafe { libcec_standby_devices(self.1, address.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -696,7 +696,7 @@ impl CecConnection {
     }
 
     pub fn set_active_source(&self, device_type: CecDeviceType) -> CecConnectionResult<()> {
-        if unsafe { libcec_set_active_source(self.1, device_type as u32) } == 0 {
+        if unsafe { libcec_set_active_source(self.1, device_type.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -715,7 +715,7 @@ impl CecConnection {
     }
 
     pub fn is_active_source(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
-        if unsafe { libcec_is_active_source(self.1, address as i32) } == 0 {
+        if unsafe { libcec_is_active_source(self.1, address.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -723,7 +723,7 @@ impl CecConnection {
     }
 
     pub fn get_device_power_status(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
-        if unsafe { libcec_get_device_power_status(self.1, address as i32) } == 0 {
+        if unsafe { libcec_get_device_power_status(self.1, address.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -735,7 +735,7 @@ impl CecConnection {
         key: CecUserControlCode,
         wait: bool,
     ) -> CecConnectionResult<()> {
-        if unsafe { libcec_send_keypress(self.1, address as i32, key as u32, wait as i32) } == 0 {
+        if unsafe { libcec_send_keypress(self.1, address.into(), key.into(), wait.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -747,7 +747,7 @@ impl CecConnection {
         address: CecLogicalAddress,
         wait: bool,
     ) -> CecConnectionResult<()> {
-        if unsafe { libcec_send_key_release(self.1, address as i32, wait as i32) } == 0 {
+        if unsafe { libcec_send_key_release(self.1, address.into(), wait.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -755,7 +755,7 @@ impl CecConnection {
     }
 
     pub fn volume_up(&self, send_release: bool) -> CecConnectionResult<()> {
-        if unsafe { libcec_volume_up(self.1, send_release as i32) } == 0 {
+        if unsafe { libcec_volume_up(self.1, send_release.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -763,7 +763,7 @@ impl CecConnection {
     }
 
     pub fn volume_down(&self, send_release: bool) -> CecConnectionResult<()> {
-        if unsafe { libcec_volume_down(self.1, send_release as i32) } == 0 {
+        if unsafe { libcec_volume_down(self.1, send_release.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -771,7 +771,7 @@ impl CecConnection {
     }
 
     pub fn mute_audio(&self, send_release: bool) -> CecConnectionResult<()> {
-        if unsafe { libcec_mute_audio(self.1, send_release as i32) } == 0 {
+        if unsafe { libcec_mute_audio(self.1, send_release.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -819,7 +819,7 @@ impl CecConnection {
     }
 
     pub fn set_logical_address(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
-        if unsafe { libcec_set_logical_address(self.1, address as i32) } == 0 {
+        if unsafe { libcec_set_logical_address(self.1, address.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -827,7 +827,7 @@ impl CecConnection {
     }
 
     pub fn switch_monitoring(&self, enable: bool) -> CecConnectionResult<()> {
-        if unsafe { libcec_switch_monitoring(self.1, enable as i32) } == 0 {
+        if unsafe { libcec_switch_monitoring(self.1, enable.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
