@@ -396,7 +396,7 @@ pub struct CecLogicalAddresses {
 impl CecLogicalAddresses {
     pub fn with_only_primary(primary: &KnownCecLogicalAddress) -> CecLogicalAddresses {
         CecLogicalAddresses {
-            primary: primary.clone(),
+            primary: *primary,
             addresses: HashSet::new(),
         }
     }
@@ -414,9 +414,9 @@ impl CecLogicalAddresses {
         primary: &KnownCecLogicalAddress,
         addresses: &HashSet<KnownAndRegisteredCecLogicalAddress>,
     ) -> Option<CecLogicalAddresses> {
-        match primary.clone().into() {
+        match (*primary).into() {
             // Invalid: Primary must be set if there are addresses
-            CecLogicalAddress::Unregistered if addresses.len() > 0 => None,
+            CecLogicalAddress::Unregistered if !addresses.is_empty() => None,
             // Empty
             CecLogicalAddress::Unregistered => Some(CecLogicalAddresses::default()),
             // Non-empty
@@ -424,11 +424,11 @@ impl CecLogicalAddresses {
                 let mut cloned_addresses = addresses.clone();
                 // Following cannot panic since primary is not representing Unregistered
                 let registered_address: KnownAndRegisteredCecLogicalAddress =
-                    primary.clone().try_into().unwrap();
+                    (*primary).try_into().unwrap();
                 // We ensure that addresses always contains the primary
                 cloned_addresses.insert(registered_address);
                 Some(CecLogicalAddresses {
-                    primary: primary.clone(),
+                    primary: *primary,
                     addresses: cloned_addresses,
                 })
             }
@@ -444,9 +444,8 @@ impl From<CecLogicalAddresses> for cec_logical_addresses {
             primary: addresses.primary.into(),
             addresses: [0; 16],
         };
-        let mut iter = addresses.addresses.iter();
-        while let Some(known_address) = iter.next() {
-            let address: CecLogicalAddress = (*known_address).into();
+        for known_address in addresses.addresses {
+            let address: CecLogicalAddress = known_address.into();
             let address_mask_position: i32 = address.into();
             data.addresses[address_mask_position as usize] = 1;
         }
