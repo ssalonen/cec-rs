@@ -25,11 +25,14 @@ repository = 'https://github.com/ssalonen/cec-rs'
 [dependencies]
 arrayvec = '0.7.1'
 log = '0.4'
-enum-repr-derive = '0.1.4'
 derive_builder = '0.10.2'
 num-traits = '0.2.14'
 
 [dependencies.libcec-sys]
 version = '1.0.7'
+
+[dependencies.enum-repr-derive]
+version = '0.2.0'
+
 [badges.maintenance]
 status = 'passively-maintained'
