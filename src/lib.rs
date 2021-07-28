@@ -116,7 +116,7 @@ impl TryFrom<KnownCecLogicalAddress> for KnownAndRegisteredCecLogicalAddress {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CecDatapacket(pub ArrayVec<[u8; 64]>);
+pub struct CecDatapacket(pub ArrayVec<u8, 64>);
 
 impl From<CecDatapacket> for cec_datapacket {
     fn from(datapacket: CecDatapacket) -> cec_datapacket {
@@ -650,11 +650,11 @@ mod keypress_tests {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CecDeviceTypeVec(pub ArrayVec<[CecDeviceType; 5]>);
+pub struct CecDeviceTypeVec(pub ArrayVec<CecDeviceType, 5>);
 
 impl CecDeviceTypeVec {
     pub fn new(type1: CecDeviceType) -> CecDeviceTypeVec {
-        let mut inner = ArrayVec::<[_; 5]>::new();
+        let mut inner = ArrayVec::<_, 5>::new();
         inner.push(type1);
         CecDeviceTypeVec(inner)
     }
