@@ -55,7 +55,7 @@ fn first_13(string: &str) -> [::std::os::raw::c_char; 13] {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CecDatapacket(pub ArrayVec<[u8; 64]>);
+pub struct CecDatapacket(pub ArrayVec<u8, 64>);
 
 impl From<CecDatapacket> for cec_datapacket {
     fn from(datapacket: CecDatapacket) -> cec_datapacket {
@@ -327,7 +327,7 @@ mod command_tests {
 
 /// List
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CecLogicalAddresses(pub ArrayVec<[CecLogicalAddress; 17]>);
+pub struct CecLogicalAddresses(pub ArrayVec<CecLogicalAddress, 17>);
 
 impl From<CecLogicalAddresses> for cec_logical_addresses {
     fn from(addresses: CecLogicalAddresses) -> cec_logical_addresses {
@@ -455,11 +455,11 @@ mod keypress_tests {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CecDeviceTypeVec(pub ArrayVec<[CecDeviceType; 5]>);
+pub struct CecDeviceTypeVec(pub ArrayVec<CecDeviceType, 5>);
 
 impl CecDeviceTypeVec {
     pub fn new(type1: CecDeviceType) -> CecDeviceTypeVec {
-        let mut inner = ArrayVec::<[_; 5]>::new();
+        let mut inner = ArrayVec::<_, 5>::new();
         inner.push(type1);
         CecDeviceTypeVec(inner)
     }
