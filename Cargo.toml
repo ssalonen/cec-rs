@@ -32,7 +32,7 @@ num-traits = '0.2.14'
 version = '1.0.7'
 
 [dependencies.enum-repr-derive]
-vesion = '0.2.0'
+version = '0.2.0'
 
 [badges.maintenance]
 status = 'passively-maintained'
