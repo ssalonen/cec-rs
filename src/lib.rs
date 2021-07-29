@@ -28,30 +28,48 @@ use std::os::raw::c_void;
 use std::time::Duration;
 use std::{mem, result};
 
-fn interpret_u8_as_char(i: u8) -> ::std::os::raw::c_char {
-    unsafe { std::mem::transmute(i) }
-}
-
-fn first_3(string: &str) -> [::std::os::raw::c_char; 3] {
-    let mut data: [::std::os::raw::c_char; 3] = [0; 3];
+fn first_n<const N: usize>(string: &str) -> [::std::os::raw::c_char; N] {
+    let mut data: [::std::os::raw::c_char; N] = [0; N];
     let bytes = string.as_bytes();
-    for (i, data_elem) in data.iter_mut().enumerate() {
-        if let Some(c) = bytes.get(i) {
-            *data_elem = interpret_u8_as_char(*c)
-        }
+    for (dst, src) in data.iter_mut().zip(bytes) {
+        // c_char is either u8 or i8. We use simple casting to convert u8 accordingly
+        *dst = *src as _;
     }
     data
 }
 
-fn first_13(string: &str) -> [::std::os::raw::c_char; 13] {
-    let mut data: [::std::os::raw::c_char; 13] = [0; 13];
-    let bytes = string.as_bytes();
-    for (i, data_elem) in data.iter_mut().enumerate() {
-        if let Some(c) = bytes.get(i) {
-            *data_elem = interpret_u8_as_char(*c)
-        }
+#[cfg(test)]
+mod util_tests {
+    use super::*;
+
+    #[test]
+    fn test_first_3() {
+        assert_eq!(
+            [b's' as _, b'a' as _, b'm' as _] as [::std::os::raw::c_char; 3],
+            first_n::<3>(&"sample")
+        );
+        assert_eq!(
+            [b's' as _, b'a' as _, 0 as _] as [::std::os::raw::c_char; 3],
+            first_n::<3>(&"sa")
+        );
+        assert_eq!(
+            [0 as _, 0 as _, 0 as _] as [::std::os::raw::c_char; 3],
+            first_n::<3>(&"")
+        );
     }
-    data
+
+    #[test]
+    fn test_first_7() {
+        assert_eq!(
+            [b's' as _, b'a' as _, b'm' as _, b'p' as _, b'l' as _, b'e' as _, 0]
+                as [::std::os::raw::c_char; 7],
+            first_n::<7>(&"sample")
+        );
+    }
+    #[test]
+    fn test_first_0() {
+        assert_eq!([] as [::std::os::raw::c_char; 0], first_n::<0>(&"sample"));
+    }
 }
 
 /// CecLogicalAddress which does not allow Unknown variant
@@ -1126,7 +1144,7 @@ impl From<&CecConnectionCfg> for libcec_configuration {
             libcec_clear_configuration(&mut cfg);
         }
         cfg.clientVersion = LIBCEC_VERSION_CURRENT;
-        cfg.strDeviceName = first_13(&config.device_name);
+        cfg.strDeviceName = first_n::<13>(&config.device_name);
         cfg.deviceTypes = config.device_types.clone().into();
         if let Some(v) = config.physical_address {
             cfg.iPhysicalAddress = v;
@@ -1156,7 +1174,7 @@ impl From<&CecConnectionCfg> for libcec_configuration {
             cfg.bPowerOffOnStandby = v.into();
         }
         if let Some(v) = config.device_language.clone() {
-            cfg.strDeviceLanguage = first_3(&v);
+            cfg.strDeviceLanguage = first_n::<3>(&v);
         }
         if let Some(v) = config.monitor_only {
             cfg.bMonitorOnly = v.into();
