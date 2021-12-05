@@ -11,22 +11,25 @@ use std::{collections::HashSet, pin::Pin};
 
 use arrayvec::ArrayVec;
 use libcec_sys::{
-    cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_logical_address,
-    cec_logical_addresses, libcec_audio_get_status, libcec_audio_mute, libcec_audio_toggle_mute,
-    libcec_audio_unmute, libcec_clear_configuration, libcec_close, libcec_configuration,
-    libcec_connection_t, libcec_destroy, libcec_enable_callbacks, libcec_get_active_source,
-    libcec_get_device_power_status, libcec_initialise, libcec_is_active_source, libcec_mute_audio,
-    libcec_open, libcec_power_on_devices, libcec_send_key_release, libcec_send_keypress,
-    libcec_set_active_source, libcec_set_inactive_view, libcec_set_logical_address,
-    libcec_standby_devices, libcec_switch_monitoring, libcec_transmit, libcec_volume_down,
-    libcec_volume_up, ICECCallbacks, LIBCEC_VERSION_CURRENT,
+    cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_log_message,
+    cec_logical_address, cec_logical_addresses, libcec_audio_get_status, libcec_audio_mute,
+    libcec_audio_toggle_mute, libcec_audio_unmute, libcec_clear_configuration, libcec_close,
+    libcec_configuration, libcec_connection_t, libcec_destroy, libcec_enable_callbacks,
+    libcec_get_active_source, libcec_get_device_power_status, libcec_initialise,
+    libcec_is_active_source, libcec_mute_audio, libcec_open, libcec_power_on_devices,
+    libcec_send_key_release, libcec_send_keypress, libcec_set_active_source,
+    libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices,
+    libcec_switch_monitoring, libcec_transmit, libcec_volume_down, libcec_volume_up, ICECCallbacks,
+    LIBCEC_VERSION_CURRENT,
 };
 use num_traits::ToPrimitive;
 use std::convert::{TryFrom, TryInto};
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::os::raw::c_void;
 use std::time::Duration;
 use std::{mem, result};
+
+use std::fmt;
 
 fn first_n<const N: usize>(string: &str) -> [::std::os::raw::c_char; N] {
     let mut data: [::std::os::raw::c_char; N] = [0; N];
@@ -404,6 +407,56 @@ mod command_tests {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum TryFromCecLogMessageError {
+    MessageParseError,
+    LogLevelParseError,
+    UnknownLogLevel,
+}
+
+#[derive(Clone)]
+pub struct CecLogMessage {
+    #[doc = "< the actual message, valid until returning from the log callback"]
+    pub message: String,
+    #[doc = "< log level of the message"]
+    pub level: CecLogLevel,
+    #[doc = "< the timestamp of this message"]
+    pub time: i64,
+}
+
+impl core::convert::TryFrom<cec_log_message> for CecLogMessage {
+    type Error = TryFromCecLogMessageError;
+
+    fn try_from(log_message: cec_log_message) -> std::result::Result<Self, Self::Error> {
+        let c_str: &CStr = unsafe { CStr::from_ptr(log_message.message) };
+        let message = c_str
+            .to_str()
+            .map_err(|_| TryFromCecLogMessageError::MessageParseError)?
+            .to_owned();
+        let level = CecLogLevel::try_from(log_message.level)
+            .map_err(|_| TryFromCecLogMessageError::LogLevelParseError)?;
+
+        Ok(CecLogMessage {
+            message: message,
+            level: level,
+            time: log_message.time,
+        })
+    }
+}
+
+impl fmt::Display for CecLogLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CecLogLevel::Error => write!(f, "Error"),
+            CecLogLevel::Warning => write!(f, "Warning"),
+            CecLogLevel::Notice => write!(f, "Notice"),
+            CecLogLevel::Traffic => write!(f, "Traffic"),
+            CecLogLevel::Debug => write!(f, "Debug"),
+            CecLogLevel::All => write!(f, "All"),
+        }
+    }
+}
+
 /// Collection of logical addresses, with one primary address
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CecLogicalAddresses {
@@ -716,11 +769,13 @@ mod cec_device_type_vec_tests {
 struct CecCallbacks {
     pub key_press_callback: Option<Box<dyn FnMut(CecKeypress) + Send>>,
     pub command_received_callback: Option<Box<dyn FnMut(CecCommand) + Send>>,
+    pub log_message_callbacks: Option<Box<dyn FnMut(CecLogMessage) + Send>>,
     // pub onSourceActivated: FnSourceActivated,
 }
 
 pub type FnKeyPress = dyn FnMut(CecKeypress) + Send;
 pub type FnCommand = dyn FnMut(CecCommand) + Send;
+pub type FnLogMessage = dyn FnMut(CecLogMessage) + Send;
 pub type FnSourceActivated = dyn FnMut(CecLogicalAddress, bool);
 
 extern "C" fn key_press_callback(rust_callbacks: *mut c_void, keypress_raw: *const cec_keypress) {
@@ -759,8 +814,25 @@ extern "C" fn command_received_callback(
     }
 }
 
+extern "C" fn log_message_callback(
+    rust_callbacks: *mut c_void,
+    log_message_raw: *const cec_log_message,
+) {
+    trace!("log_message_callback");
+    let rust_callbacks: *mut CecCallbacks = rust_callbacks.cast();
+    if let Some(rust_callbacks) = unsafe { rust_callbacks.as_mut() } {
+        if let Some(log_message) = unsafe { log_message_raw.as_ref() } {
+            if let Some(rust_callback) = &mut rust_callbacks.log_message_callbacks {
+                if let Ok(log_message) = (*log_message).try_into() {
+                    rust_callback(log_message);
+                }
+            }
+        }
+    }
+}
+
 static mut CALLBACKS: ICECCallbacks = ICECCallbacks {
-    logMessage: Option::None,
+    logMessage: Option::Some(log_message_callback),
     keyPress: Option::Some(key_press_callback),
     commandReceived: Option::Some(command_received_callback),
     configurationChanged: Option::None,
@@ -776,6 +848,8 @@ pub struct CecConnectionCfg {
     pub key_press_callback: Option<Box<FnKeyPress>>,
     #[builder(default, setter(strip_option), pattern = "owned")]
     pub command_received_callback: Option<Box<FnCommand>>,
+    #[builder(default, setter(strip_option), pattern = "owned")]
+    pub log_message_callback: Option<Box<FnLogMessage>>,
 
     pub port: String,
 
@@ -1100,6 +1174,7 @@ impl CecConnectionCfg {
         let pinned_callbacks = Box::pin(CecCallbacks {
             key_press_callback: std::mem::replace(&mut self.key_press_callback, None),
             command_received_callback: std::mem::replace(&mut self.command_received_callback, None),
+            log_message_callbacks: std::mem::replace(&mut self.log_message_callback, None),
         });
         let rust_callbacks_as_void_ptr = &*pinned_callbacks as *const _ as *mut _;
         let port = CString::new(self.port.clone()).expect("Invalid port name");
