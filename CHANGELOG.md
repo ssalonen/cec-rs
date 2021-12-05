@@ -7,8 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+<<<<<<< HEAD
 - Fixes build errors with libcec-sys
 - Added `log_message_callbacks`.
+=======
+-   Added `log_message_callbacks`.
+>>>>>>> bc8a622 (Updated changelog)
 
 ## 2.2.1
 
