@@ -7,10 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- N/A
+-   Added `log_message_callbacks`.
 
 ## 2.2.1
 
-- CI fixes and improvements
-- Fix clippy errors, regenerating `enums.rs` and utilizing new `enum-repr-derive`
-- Avoid unsafe transmute with `c_char`
+-   CI fixes and improvements
+-   Fix clippy errors, regenerating `enums.rs` and utilizing new `enum-repr-derive`
+-   Avoid unsafe transmute with `c_char`
