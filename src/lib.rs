@@ -411,17 +411,18 @@ mod command_tests {
 pub enum TryFromCecLogMessageError {
     MessageParseError,
     LogLevelParseError,
+    TimestampParseError,
     UnknownLogLevel,
 }
 
 #[derive(Clone)]
 pub struct CecLogMessage {
-    #[doc = "< the actual message, valid until returning from the log callback"]
+    #[doc = "the actual message"]
     pub message: String,
-    #[doc = "< log level of the message"]
+    #[doc = "log level of the message"]
     pub level: CecLogLevel,
-    #[doc = "< the timestamp of this message"]
-    pub time: i64,
+    #[doc = "duration since connection was established"]
+    pub time: Duration,
 }
 
 impl core::convert::TryFrom<cec_log_message> for CecLogMessage {
@@ -435,11 +436,15 @@ impl core::convert::TryFrom<cec_log_message> for CecLogMessage {
             .to_owned();
         let level = CecLogLevel::try_from(log_message.level)
             .map_err(|_| TryFromCecLogMessageError::LogLevelParseError)?;
+        let time = log_message
+            .time
+            .try_into()
+            .map_err(|_| TryFromCecLogMessageError::TimestampParseError)?;
 
         Ok(CecLogMessage {
             message,
             level,
-            time: log_message.time,
+            time: Duration::from_millis(time),
         })
     }
 }
