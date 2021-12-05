@@ -437,8 +437,8 @@ impl core::convert::TryFrom<cec_log_message> for CecLogMessage {
             .map_err(|_| TryFromCecLogMessageError::LogLevelParseError)?;
 
         Ok(CecLogMessage {
-            message: message,
-            level: level,
+            message,
+            level,
             time: log_message.time,
         })
     }
