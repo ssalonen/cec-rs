@@ -3,7 +3,10 @@ use env_logger;
 use log::trace;
 
 extern crate cec_rs;
-use cec_rs::{CecCommand, CecConnectionCfgBuilder, CecDeviceType, CecDeviceTypeVec, CecKeypress};
+use cec_rs::{
+    CecCommand, CecConnectionCfgBuilder, CecDeviceType, CecDeviceTypeVec, CecKeypress,
+    CecLogMessage,
+};
 use std::{thread, time};
 
 fn on_key_press(keypress: CecKeypress) {
@@ -23,6 +26,15 @@ fn on_command_received(command: CecCommand) {
     );
 }
 
+fn on_log_level(log_message: CecLogMessage) {
+    trace!(
+        "logMessageRecieved:  time: {}, level: {}, message: {}",
+        log_message.time,
+        log_message.level,
+        log_message.message
+    );
+}
+
 pub fn main() {
     env_logger::init();
 
@@ -31,6 +43,7 @@ pub fn main() {
         .device_name("Hifiberry".into())
         .key_press_callback(Box::new(on_key_press))
         .command_received_callback(Box::new(on_command_received))
+        .log_message_callback(Box::new(on_log_level))
         .device_types(CecDeviceTypeVec::new(CecDeviceType::AudioSystem))
         .build()
         .unwrap();
