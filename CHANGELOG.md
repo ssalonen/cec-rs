@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 2.2.2
+
 - Fixes build errors with libcec-sys
 
 ## 2.2.1
