@@ -1,23 +1,14 @@
 [package]
 name = 'cec-rs'
-version = "2.2.3-alpha.0"
+version = "3.0.0-alpha.0"
 authors = ['Sami Salonen']
 edition = '2018'
 license = 'GPL-2.0'
 description = 'Thin but safe wrapper for libcec'
 documentation = 'https://docs.rs/cec-rs'
 readme = 'README.md'
-include = [
-    '/README.md',
-    '/LICENSE',
-    '/Cargo.toml',
-    '/src/*.rs',
-]
-keywords = [
-    'libcec',
-    'cec',
-    'hdmi',
-]
+include = ['/README.md', '/LICENSE', '/Cargo.toml', '/src/*.rs']
+keywords = ['libcec', 'cec', 'hdmi']
 categories = ['api-bindings']
 homepage = 'https://github.com/ssalonen/cec-rs'
 repository = 'https://github.com/ssalonen/cec-rs'
@@ -29,7 +20,7 @@ derive_builder = '0.10.2'
 num-traits = '0.2.14'
 
 [dependencies.libcec-sys]
-version = '1.1.1'
+version = '2.0.0'
 
 [dependencies.enum-repr-derive]
 version = '0.2.0'
