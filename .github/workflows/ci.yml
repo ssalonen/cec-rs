@@ -109,7 +109,7 @@ jobs:
             - name: Update apt
               run: sudo apt-get update
             - name: Install dependencies for build and coverage
-              run: sudo apt-get install libudev-dev libcec4
+              run: sudo apt-get install libudev-dev libcec4 libcec-dev pkg-config libp8-platform-dev
             - name: Install stable toolchain
               uses: actions-rs/toolchain@v1
               with:
