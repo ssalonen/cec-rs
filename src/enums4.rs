@@ -1,4 +1,4 @@
-use enum_repr_derive::{FromEnumToRepr, TryFromReprToEnum};
+use enum_repr_derive::{TryFromReprToEnum, FromEnumToRepr};
 
 //
 // Enums
@@ -167,41 +167,29 @@ pub enum CecRecordSourceType {
 #[repr(u32)]
 #[derive(FromEnumToRepr, TryFromReprToEnum, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum CecRecordStatusInfo {
-    RecordingCurrentlySelectedSource =
-        libcec_sys::CEC_RECORD_STATUS_INFO_RECORDING_CURRENTLY_SELECTED_SOURCE,
+    RecordingCurrentlySelectedSource = libcec_sys::CEC_RECORD_STATUS_INFO_RECORDING_CURRENTLY_SELECTED_SOURCE,
     RecordingDigitalService = libcec_sys::CEC_RECORD_STATUS_INFO_RECORDING_DIGITAL_SERVICE,
     RecordingAnalogueService = libcec_sys::CEC_RECORD_STATUS_INFO_RECORDING_ANALOGUE_SERVICE,
     RecordingExternalInput = libcec_sys::CEC_RECORD_STATUS_INFO_RECORDING_EXTERNAL_INPUT,
-    NoRecordingUnableToRecordDigitalService =
-        libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_UNABLE_TO_RECORD_DIGITAL_SERVICE,
-    NoRecordingUnableToRecordAnalogueService =
-        libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_UNABLE_TO_RECORD_ANALOGUE_SERVICE,
-    NoRecordingUnableToSelectRequiredService =
-        libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_UNABLE_TO_SELECT_REQUIRED_SERVICE,
-    NoRecordingInvalidExternalPlugNumber =
-        libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_INVALID_EXTERNAL_PLUG_NUMBER,
-    NoRecordingInvalidExternalAddress =
-        libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_INVALID_EXTERNAL_ADDRESS,
-    NoRecordingCaSystemNotSupported =
-        libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_CA_SYSTEM_NOT_SUPPORTED,
-    NoRecordingNoOrInsufficientEntitlements =
-        libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_NO_OR_INSUFFICIENT_ENTITLEMENTS,
-    NoRecordingNotAllowedToCopySource =
-        libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_NOT_ALLOWED_TO_COPY_SOURCE,
-    NoRecordingNoFurtherCopiesAllowed =
-        libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_NO_FURTHER_COPIES_ALLOWED,
+    NoRecordingUnableToRecordDigitalService = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_UNABLE_TO_RECORD_DIGITAL_SERVICE,
+    NoRecordingUnableToRecordAnalogueService = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_UNABLE_TO_RECORD_ANALOGUE_SERVICE,
+    NoRecordingUnableToSelectRequiredService = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_UNABLE_TO_SELECT_REQUIRED_SERVICE,
+    NoRecordingInvalidExternalPlugNumber = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_INVALID_EXTERNAL_PLUG_NUMBER,
+    NoRecordingInvalidExternalAddress = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_INVALID_EXTERNAL_ADDRESS,
+    NoRecordingCaSystemNotSupported = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_CA_SYSTEM_NOT_SUPPORTED,
+    NoRecordingNoOrInsufficientEntitlements = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_NO_OR_INSUFFICIENT_ENTITLEMENTS,
+    NoRecordingNotAllowedToCopySource = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_NOT_ALLOWED_TO_COPY_SOURCE,
+    NoRecordingNoFurtherCopiesAllowed = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_NO_FURTHER_COPIES_ALLOWED,
     NoRecordingNoMedia = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_NO_MEDIA,
     NoRecordingPlaying = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_PLAYING,
     NoRecordingAlreadyRecording = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_ALREADY_RECORDING,
     NoRecordingMediaProtected = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_MEDIA_PROTECTED,
     NoRecordingNoSourceSignal = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_NO_SOURCE_SIGNAL,
     NoRecordingMediaProblem = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_MEDIA_PROBLEM,
-    NoRecordingNotEnoughSpaceAvailable =
-        libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_NOT_ENOUGH_SPACE_AVAILABLE,
+    NoRecordingNotEnoughSpaceAvailable = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_NOT_ENOUGH_SPACE_AVAILABLE,
     NoRecordingParentalLockOn = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_PARENTAL_LOCK_ON,
     RecordingTerminatedNormally = libcec_sys::CEC_RECORD_STATUS_INFO_RECORDING_TERMINATED_NORMALLY,
-    RecordingHasAlreadyTerminated =
-        libcec_sys::CEC_RECORD_STATUS_INFO_RECORDING_HAS_ALREADY_TERMINATED,
+    RecordingHasAlreadyTerminated = libcec_sys::CEC_RECORD_STATUS_INFO_RECORDING_HAS_ALREADY_TERMINATED,
     NoRecordingOtherReason = libcec_sys::CEC_RECORD_STATUS_INFO_NO_RECORDING_OTHER_REASON,
 }
 #[repr(u32)]
@@ -234,8 +222,7 @@ pub enum CecSystemAudioStatus {
 pub enum CecTimerClearedStatusData {
     NotClearedRecording = libcec_sys::CEC_TIMER_CLEARED_STATUS_DATA_TIMER_NOT_CLEARED_RECORDING,
     NotClearedNoMatching = libcec_sys::CEC_TIMER_CLEARED_STATUS_DATA_TIMER_NOT_CLEARED_NO_MATCHING,
-    NotClearedNoInf0Available =
-        libcec_sys::CEC_TIMER_CLEARED_STATUS_DATA_TIMER_NOT_CLEARED_NO_INF0_AVAILABLE,
+    NotClearedNoInf0Available = libcec_sys::CEC_TIMER_CLEARED_STATUS_DATA_TIMER_NOT_CLEARED_NO_INF0_AVAILABLE,
     Cleared = libcec_sys::CEC_TIMER_CLEARED_STATUS_DATA_TIMER_CLEARED,
 }
 #[repr(u32)]
@@ -262,12 +249,9 @@ pub enum CecProgrammedIndicator {
 #[derive(FromEnumToRepr, TryFromReprToEnum, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum CecProgrammedInfo {
     FutureUse = libcec_sys::CEC_PROGRAMMED_INFO_FUTURE_USE,
-    EnoughSpaceAvailableForRecording =
-        libcec_sys::CEC_PROGRAMMED_INFO_ENOUGH_SPACE_AVAILABLE_FOR_RECORDING,
-    NotEnoughSpaceAvailableForRecording =
-        libcec_sys::CEC_PROGRAMMED_INFO_NOT_ENOUGH_SPACE_AVAILABLE_FOR_RECORDING,
-    MayNotBeEnoughSpaceAvailable =
-        libcec_sys::CEC_PROGRAMMED_INFO_MAY_NOT_BE_ENOUGH_SPACE_AVAILABLE,
+    EnoughSpaceAvailableForRecording = libcec_sys::CEC_PROGRAMMED_INFO_ENOUGH_SPACE_AVAILABLE_FOR_RECORDING,
+    NotEnoughSpaceAvailableForRecording = libcec_sys::CEC_PROGRAMMED_INFO_NOT_ENOUGH_SPACE_AVAILABLE_FOR_RECORDING,
+    MayNotBeEnoughSpaceAvailable = libcec_sys::CEC_PROGRAMMED_INFO_MAY_NOT_BE_ENOUGH_SPACE_AVAILABLE,
     NoMediaInfoAvailable = libcec_sys::CEC_PROGRAMMED_INFO_NO_MEDIA_INFO_AVAILABLE,
 }
 #[repr(u32)]
@@ -277,22 +261,16 @@ pub enum CecNotProgrammedErrorInfo {
     NoFreeTimerAvailable = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_NO_FREE_TIMER_AVAILABLE,
     DateOutOfRange = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_DATE_OUT_OF_RANGE,
     RecordingSequenceError = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_RECORDING_SEQUENCE_ERROR,
-    InvalidExternalPlugNumber =
-        libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_INVALID_EXTERNAL_PLUG_NUMBER,
-    InvalidExternalPhysicalAddress =
-        libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_INVALID_EXTERNAL_PHYSICAL_ADDRESS,
+    InvalidExternalPlugNumber = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_INVALID_EXTERNAL_PLUG_NUMBER,
+    InvalidExternalPhysicalAddress = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_INVALID_EXTERNAL_PHYSICAL_ADDRESS,
     CaSystemNotSupported = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_CA_SYSTEM_NOT_SUPPORTED,
-    NoOrInsufficientCaEntitlements =
-        libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_NO_OR_INSUFFICIENT_CA_ENTITLEMENTS,
-    DoesNotSupportResolution =
-        libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_DOES_NOT_SUPPORT_RESOLUTION,
+    NoOrInsufficientCaEntitlements = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_NO_OR_INSUFFICIENT_CA_ENTITLEMENTS,
+    DoesNotSupportResolution = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_DOES_NOT_SUPPORT_RESOLUTION,
     ParentalLockOn = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_PARENTAL_LOCK_ON,
     ClockFailure = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_CLOCK_FAILURE,
-    ReservedForFutureUseStart =
-        libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_RESERVED_FOR_FUTURE_USE_START,
+    ReservedForFutureUseStart = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_RESERVED_FOR_FUTURE_USE_START,
     ReservedForFutureUseEnd = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_RESERVED_FOR_FUTURE_USE_END,
-    DuplicateAlreadyProgrammed =
-        libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_DUPLICATE_ALREADY_PROGRAMMED,
+    DuplicateAlreadyProgrammed = libcec_sys::CEC_NOT_PROGRAMMED_ERROR_INFO_DUPLICATE_ALREADY_PROGRAMMED,
 }
 #[repr(u32)]
 #[derive(FromEnumToRepr, TryFromReprToEnum, Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -499,6 +477,8 @@ pub enum CecOpcode {
     SystemAudioModeRequest = libcec_sys::CEC_OPCODE_SYSTEM_AUDIO_MODE_REQUEST,
     SystemAudioModeStatus = libcec_sys::CEC_OPCODE_SYSTEM_AUDIO_MODE_STATUS,
     SetAudioRate = libcec_sys::CEC_OPCODE_SET_AUDIO_RATE,
+    ReportShortAudioDescriptors = libcec_sys::CEC_OPCODE_REPORT_SHORT_AUDIO_DESCRIPTORS,
+    RequestShortAudioDescriptors = libcec_sys::CEC_OPCODE_REQUEST_SHORT_AUDIO_DESCRIPTORS,
     StartArc = libcec_sys::CEC_OPCODE_START_ARC,
     ReportArcStarted = libcec_sys::CEC_OPCODE_REPORT_ARC_STARTED,
     ReportArcEnded = libcec_sys::CEC_OPCODE_REPORT_ARC_ENDED,
@@ -537,6 +517,7 @@ pub enum CecVendorId {
     Onkyo = libcec_sys::CEC_VENDOR_ONKYO,
     Medion = libcec_sys::CEC_VENDOR_MEDION,
     Toshiba2 = libcec_sys::CEC_VENDOR_TOSHIBA2,
+    Apple = libcec_sys::CEC_VENDOR_APPLE,
     PulseEight = libcec_sys::CEC_VENDOR_PULSE_EIGHT,
     HarmanKardon2 = libcec_sys::CEC_VENDOR_HARMAN_KARDON2,
     Google = libcec_sys::CEC_VENDOR_GOOGLE,
@@ -567,7 +548,9 @@ pub enum CecAdapterType {
     Rpi = libcec_sys::ADAPTERTYPE_RPI,
     Tda995x = libcec_sys::ADAPTERTYPE_TDA995x,
     Exynos = libcec_sys::ADAPTERTYPE_EXYNOS,
+    Linux = libcec_sys::ADAPTERTYPE_LINUX,
     Aocec = libcec_sys::ADAPTERTYPE_AOCEC,
+    Imx = libcec_sys::ADAPTERTYPE_IMX,
 }
 #[repr(u32)]
 #[doc = " force exporting through swig"]

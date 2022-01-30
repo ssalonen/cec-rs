@@ -2,11 +2,25 @@ extern crate enum_repr_derive;
 #[macro_use]
 extern crate derive_builder;
 
-mod enums;
+#[cfg(abi4)]
+mod enums4;
+#[cfg(abi4)]
+pub use enums4::*;
+#[cfg(abi5)]
+mod enums5;
+#[cfg(abi5)]
+pub use crate::enums5::*;
+
+#[cfg(abi6)]
+mod enums6;
+
+#[cfg(abi6)]
+pub use crate::enums6::*;
+#[cfg(all(not(abi4), not(abi5), not(abi6)))]
+compile_error!("BUG: libcec abi not detected");
 
 use log::{trace, warn};
 
-pub use self::enums::*;
 use std::{collections::HashSet, pin::Pin};
 
 use arrayvec::ArrayVec;
@@ -20,7 +34,7 @@ use libcec_sys::{
     libcec_send_key_release, libcec_send_keypress, libcec_set_active_source,
     libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices,
     libcec_switch_monitoring, libcec_transmit, libcec_volume_down, libcec_volume_up, ICECCallbacks,
-    LIBCEC_VERSION_CURRENT,
+    LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
 };
 use num_traits::ToPrimitive;
 use std::convert::{TryFrom, TryInto};
@@ -1224,7 +1238,7 @@ impl From<&CecConnectionCfg> for libcec_configuration {
             libcec_clear_configuration(&mut cfg);
         }
         cfg.clientVersion = LIBCEC_VERSION_CURRENT;
-        cfg.strDeviceName = first_n::<13>(&config.device_name);
+        cfg.strDeviceName = first_n::<{ LIBCEC_OSD_NAME_SIZE as usize }>(&config.device_name);
         cfg.deviceTypes = config.device_types.clone().into();
         if let Some(v) = config.physical_address {
             cfg.iPhysicalAddress = v;
