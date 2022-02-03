@@ -45,6 +45,48 @@ use std::{mem, result};
 
 use std::fmt;
 
+#[cfg(test)]
+mod tests {
+
+    use libcec_sys::CEC_LIB_VERSION_MAJOR;
+    use std::env;
+
+    #[test]
+    fn test_abi_ci() {
+        if env::var("CI").is_err() {
+            // Not running in CI
+            return;
+        }
+        let expected_abi = env::var("EXPECTED_LIBCEC_VERSION_MAJOR")
+            .expect("CI needs to specify EXPECTED_LIBCEC_VERSION_MAJOR");
+
+        assert_eq!(
+            CEC_LIB_VERSION_MAJOR,
+            expected_abi
+                .parse()
+                .expect("Invalid EXPECTED_LIBCEC_VERSION_MAJOR: could not parse to number")
+        );
+    }
+
+    #[cfg(abi4)]
+    #[test]
+    fn test_abi4() {
+        assert_eq!(CEC_LIB_VERSION_MAJOR, 4);
+    }
+
+    #[cfg(abi5)]
+    #[test]
+    fn test_abi5() {
+        assert_eq!(CEC_LIB_VERSION_MAJOR, 5);
+    }
+
+    #[cfg(abi6)]
+    #[test]
+    fn test_abi6() {
+        assert_eq!(CEC_LIB_VERSION_MAJOR, 6);
+    }
+}
+
 fn first_n<const N: usize>(string: &str) -> [::std::os::raw::c_char; N] {
     let mut data: [::std::os::raw::c_char; N] = [0; N];
     let bytes = string.as_bytes();
