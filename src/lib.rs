@@ -28,14 +28,14 @@ use libcec_sys::{
     cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_log_message,
     cec_logical_address, cec_logical_addresses, libcec_audio_get_status, libcec_audio_mute,
     libcec_audio_toggle_mute, libcec_audio_unmute, libcec_clear_configuration, libcec_close,
-    libcec_configuration, libcec_connection_t, libcec_destroy, libcec_enable_callbacks,
-    libcec_get_active_source, libcec_get_device_power_status, libcec_initialise,
-    libcec_is_active_source, libcec_mute_audio, libcec_open, libcec_power_on_devices,
-    libcec_send_key_release, libcec_send_keypress, libcec_set_active_source,
-    libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices,
-    libcec_switch_monitoring, libcec_transmit, libcec_volume_down, libcec_volume_up, ICECCallbacks,
-    LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
+    libcec_configuration, libcec_connection_t, libcec_destroy, libcec_get_active_source,
+    libcec_get_device_power_status, libcec_initialise, libcec_is_active_source, libcec_mute_audio,
+    libcec_open, libcec_power_on_devices, libcec_send_key_release, libcec_send_keypress,
+    libcec_set_active_source, libcec_set_inactive_view, libcec_set_logical_address,
+    libcec_standby_devices, libcec_switch_monitoring, libcec_transmit, libcec_volume_down,
+    libcec_volume_up, ICECCallbacks, LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
 };
+
 use num_traits::ToPrimitive;
 use std::convert::{TryFrom, TryInto};
 use std::ffi::{CStr, CString};
@@ -59,33 +59,35 @@ fn first_n<const N: usize>(string: &str) -> [::std::os::raw::c_char; N] {
 mod util_tests {
     use super::*;
 
+    #[allow(clippy::unnecessary_cast)]
     #[test]
     fn test_first_3() {
         assert_eq!(
             [b's' as _, b'a' as _, b'm' as _] as [::std::os::raw::c_char; 3],
-            first_n::<3>(&"sample")
+            first_n::<3>("sample")
         );
         assert_eq!(
             [b's' as _, b'a' as _, 0 as _] as [::std::os::raw::c_char; 3],
-            first_n::<3>(&"sa")
+            first_n::<3>("sa")
         );
         assert_eq!(
             [0 as _, 0 as _, 0 as _] as [::std::os::raw::c_char; 3],
-            first_n::<3>(&"")
+            first_n::<3>("")
         );
     }
 
+    #[allow(clippy::unnecessary_cast)]
     #[test]
     fn test_first_7() {
         assert_eq!(
             [b's' as _, b'a' as _, b'm' as _, b'p' as _, b'l' as _, b'e' as _, 0]
                 as [::std::os::raw::c_char; 7],
-            first_n::<7>(&"sample")
+            first_n::<7>("sample")
         );
     }
     #[test]
     fn test_first_0() {
-        assert_eq!([] as [::std::os::raw::c_char; 0], first_n::<0>(&"sample"));
+        assert_eq!([] as [::std::os::raw::c_char; 0], first_n::<0>("sample"));
     }
 }
 
@@ -1211,12 +1213,26 @@ impl CecConnectionCfg {
             return Err(CecConnectionResultError::AdapterOpenFailed);
         }
 
-        if unsafe {
-            libcec_enable_callbacks(connection.1, rust_callbacks_as_void_ptr, &mut CALLBACKS)
-        } == 0
-        {
+        #[cfg(abi4)]
+        let callback_ret = unsafe {
+            libcec_sys::libcec_enable_callbacks(
+                connection.1,
+                rust_callbacks_as_void_ptr,
+                &mut CALLBACKS,
+            )
+        };
+        #[cfg(not(abi4))]
+        let callback_ret = unsafe {
+            libcec_sys::libcec_set_callbacks(
+                connection.1,
+                &mut CALLBACKS,
+                rust_callbacks_as_void_ptr,
+            )
+        };
+        if callback_ret == 0 {
             return Err(CecConnectionResultError::CallbackRegistrationFailed);
         }
+
         Ok(connection)
     }
 }
