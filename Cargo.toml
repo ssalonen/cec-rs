@@ -21,7 +21,10 @@ derive_builder = '0.10.2'
 num-traits = '0.2.14'
 
 [dependencies.libcec-sys]
-version = '2.0.1'
+#version = '2.0.1'
+#path = '../libcec-sys'
+git = "https://github.com/ssalonen/libcec-sys"
+branch = "multi-abi"
 
 [dependencies.enum-repr-derive]
 version = '0.2.0'
