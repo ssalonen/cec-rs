@@ -9,7 +9,7 @@ name: Continuous Integration
 
 jobs:
     test:
-        name: Test Suite ${{ matrix.job.target }} (${{ matrix.job.libcec || "vendored libcec" }})
+        name: Test Suite ${{ matrix.job.target }} (${{ matrix.job.libcec }})
         runs-on: ${{ matrix.job.os }}
         strategy:
             matrix:
@@ -17,18 +17,22 @@ jobs:
                 job:
                     - os: ubuntu-latest
                       target: aarch64-unknown-linux-gnu
+                      libcec: vendored-libcec
                       use-cross: true
                       expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: i686-unknown-linux-gnu
+                      libcec: vendored-libcec
                       use-cross: true
                       expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: arm-unknown-linux-gnueabi
+                      libcec: vendored-libcec
                       use-cross: true
                       expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: armv7-unknown-linux-gnueabihf
+                      libcec: vendored-libcec
                       use-cross: true
                       expected_libcec_abi: 4
                     - os: ubuntu-latest
@@ -37,18 +41,22 @@ jobs:
                       expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: mips64-unknown-linux-gnuabi64
+                      libcec: vendored-libcec
                       use-cross: true
                       expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: mips64el-unknown-linux-gnuabi64
+                      libcec: vendored-libcec
                       use-cross: true
                       expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: mipsel-unknown-linux-gnu
+                      libcec: vendored-libcec
                       use-cross: true
                       expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
+                      libcec: vendored-libcec
                       use-cross: true
                       expected_libcec_abi: 4
                     #
