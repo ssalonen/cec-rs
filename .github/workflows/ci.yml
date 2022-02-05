@@ -125,6 +125,7 @@ jobs:
               uses: actions-rs/cargo@v1
               env:
                   EXPECTED_LIBCEC_VERSION_MAJOR: ${{ matrix.job.expected_libcec_abi }}
+                  CARGO_NET_GIT_FETCH_WITH_CLI: true
               with:
                   command: test
                   use-cross: ${{ matrix.job.use-cross }}
