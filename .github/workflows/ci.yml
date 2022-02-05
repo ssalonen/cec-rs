@@ -84,7 +84,7 @@ jobs:
                   ref: multi-abi
                   path: libcec-sys-multi-abi
             - name: Checkout libcec-sys submodules
-              run: git -C libcec-sys-multi-abi -c url.https://github.com/.insteadOf=git@github.com: submodule update --init --recursive
+              run: git -C libcec-sys-multi-abi -c "url.https://github.com/.insteadOf=git@github.com:"" submodule update --init --recursive
             - name: Checkout repository
               uses: actions/checkout@v2
             - name: Install Rust
