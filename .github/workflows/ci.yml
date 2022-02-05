@@ -77,6 +77,8 @@ jobs:
                       pkg-config: true
                       expected_libcec_abi: 6
         steps:
+            - name: Rewrite git submodule URLs with https
+              run: git config --global url."https://github".insteadOf git://github
             - name: Checkout repository
               uses: actions/checkout@v2
             - name: Install Rust
