@@ -77,10 +77,14 @@ jobs:
                       pkg-config: true
                       expected_libcec_abi: 6
         steps:
-            - name: Rewrite git submodule URLs with https
-              run: |
-                  git config --global url."https://github.com/".insteadOf git://git@github.com:
-                  git config --global url."https://github.com/".insteadOf git://github.com:
+            - name: Checkout libcec-sys feature branch
+              uses: actions/checkout@v2
+              with:
+                  repository: ssalonen/libcec-sys
+                  ref: multi-abi
+                  path: libcec-sys-multi-abi
+            - name: Checkout libcec-sys submodules
+              run: git -C libcec-sys-multi-abi -c url.https://github.com/.insteadOf=git@github.com: submodule update --init --recursive
             - name: Checkout repository
               uses: actions/checkout@v2
             - name: Install Rust
