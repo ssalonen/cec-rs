@@ -89,6 +89,8 @@ jobs:
               uses: actions/checkout@v2
             - name: debug
               run: ls -la
+            - name: debug2
+              run: ls -la ..
             - name: Install Rust
               uses: actions-rs/toolchain@v1
               with:
