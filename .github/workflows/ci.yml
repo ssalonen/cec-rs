@@ -87,6 +87,8 @@ jobs:
               run: git -C libcec-sys-multi-abi -c "url.https://github.com/.insteadOf=git@github.com:" submodule update --init --recursive
             - name: Checkout repository
               uses: actions/checkout@v2
+            - name: debug
+              run: ls -la
             - name: Install Rust
               uses: actions-rs/toolchain@v1
               with:
