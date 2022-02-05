@@ -91,6 +91,8 @@ jobs:
               run: ls -la
             - name: debug2
               run: ls -la ..
+            - name: debug3
+              run: ls -la ../..
             - name: Install Rust
               uses: actions-rs/toolchain@v1
               with:
