@@ -83,16 +83,34 @@ jobs:
                   repository: ssalonen/libcec-sys
                   ref: multi-abi
                   path: libcec-sys-multi-abi
+            - name: debug
+              run: |
+                  pwd
+                  ls -la
+                  ls -la ..
+                  ls -la ../..
             - name: Checkout libcec-sys submodules
               run: git -C libcec-sys-multi-abi -c "url.https://github.com/.insteadOf=git@github.com:" submodule update --init --recursive
+            - name: debug
+              run: |
+                  pwd
+                  ls -la
+                  ls -la ..
+                  ls -la ../..
             - name: Checkout repository
               uses: actions/checkout@v2
             - name: debug
-              run: ls -la
-            - name: debug2
-              run: ls -la ..
-            - name: debug3
-              run: ls -la ../..
+              run: |
+                  pwd
+                  ls -la
+                  ls -la ..
+                  ls -la ../..
+            - name: debug
+              run: |
+                  pwd
+                  ls -la
+                  ls -la ..
+                  ls -la ../..
             - name: Install Rust
               uses: actions-rs/toolchain@v1
               with:
