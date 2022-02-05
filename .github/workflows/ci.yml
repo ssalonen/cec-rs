@@ -80,7 +80,7 @@ jobs:
             - name: Rewrite git submodule URLs with https
               run: |
                   git config --global url."https://github".insteadOf git://github
-                  git config --global url."https://github".insteadOf git@github.com:
+                  git config --global url."https://github.com/".insteadOf git@github.com:
             - name: Checkout repository
               uses: actions/checkout@v2
             - name: Install Rust
