@@ -77,40 +77,18 @@ jobs:
                       pkg-config: true
                       expected_libcec_abi: 6
         steps:
+            - name: Checkout repository
+              uses: actions/checkout@v2
+            # libcec feature branch START
             - name: Checkout libcec-sys feature branch
               uses: actions/checkout@v2
               with:
                   repository: ssalonen/libcec-sys
                   ref: multi-abi
                   path: libcec-sys-multi-abi
-            - name: debug
-              run: |
-                  pwd
-                  ls -la
-                  ls -la ..
-                  ls -la ../..
             - name: Checkout libcec-sys submodules
               run: git -C libcec-sys-multi-abi -c "url.https://github.com/.insteadOf=git@github.com:" submodule update --init --recursive
-            - name: debug
-              run: |
-                  pwd
-                  ls -la
-                  ls -la ..
-                  ls -la ../..
-            - name: Checkout repository
-              uses: actions/checkout@v2
-            - name: debug
-              run: |
-                  pwd
-                  ls -la
-                  ls -la ..
-                  ls -la ../..
-            - name: debug
-              run: |
-                  pwd
-                  ls -la
-                  ls -la ..
-                  ls -la ../..
+            # libcec feature branch END
             - name: Install Rust
               uses: actions-rs/toolchain@v1
               with:
