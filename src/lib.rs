@@ -1023,8 +1023,8 @@ pub struct CecConnection(
 );
 
 impl CecConnection {
-    pub fn transmit(&self, command: cec_command) -> CecConnectionResult<()> {
-        if unsafe { libcec_transmit(self.1, &command) } == 0 {
+    pub fn transmit(&self, command: CecCommand) -> CecConnectionResult<()> {
+        if unsafe { libcec_transmit(self.1, &command.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
