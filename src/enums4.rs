@@ -499,6 +499,8 @@ pub enum CecOpcode {
     SystemAudioModeRequest = libcec_sys::CEC_OPCODE_SYSTEM_AUDIO_MODE_REQUEST,
     SystemAudioModeStatus = libcec_sys::CEC_OPCODE_SYSTEM_AUDIO_MODE_STATUS,
     SetAudioRate = libcec_sys::CEC_OPCODE_SET_AUDIO_RATE,
+    ReportShortAudioDescriptors = libcec_sys::CEC_OPCODE_REPORT_SHORT_AUDIO_DESCRIPTORS,
+    RequestShortAudioDescriptors = libcec_sys::CEC_OPCODE_REQUEST_SHORT_AUDIO_DESCRIPTORS,
     StartArc = libcec_sys::CEC_OPCODE_START_ARC,
     ReportArcStarted = libcec_sys::CEC_OPCODE_REPORT_ARC_STARTED,
     ReportArcEnded = libcec_sys::CEC_OPCODE_REPORT_ARC_ENDED,
@@ -537,6 +539,7 @@ pub enum CecVendorId {
     Onkyo = libcec_sys::CEC_VENDOR_ONKYO,
     Medion = libcec_sys::CEC_VENDOR_MEDION,
     Toshiba2 = libcec_sys::CEC_VENDOR_TOSHIBA2,
+    Apple = libcec_sys::CEC_VENDOR_APPLE,
     PulseEight = libcec_sys::CEC_VENDOR_PULSE_EIGHT,
     HarmanKardon2 = libcec_sys::CEC_VENDOR_HARMAN_KARDON2,
     Google = libcec_sys::CEC_VENDOR_GOOGLE,
@@ -567,7 +570,9 @@ pub enum CecAdapterType {
     Rpi = libcec_sys::ADAPTERTYPE_RPI,
     Tda995x = libcec_sys::ADAPTERTYPE_TDA995x,
     Exynos = libcec_sys::ADAPTERTYPE_EXYNOS,
+    Linux = libcec_sys::ADAPTERTYPE_LINUX,
     Aocec = libcec_sys::ADAPTERTYPE_AOCEC,
+    Imx = libcec_sys::ADAPTERTYPE_IMX,
 }
 #[repr(u32)]
 #[doc = " force exporting through swig"]

@@ -9,7 +9,7 @@ name: Continuous Integration
 
 jobs:
     test:
-        name: Test Suite ${{ matrix.job.target }}
+        name: Test Suite ${{ matrix.job.target }} (${{ matrix.job.libcec }})
         runs-on: ${{ matrix.job.os }}
         strategy:
             matrix:
@@ -17,31 +17,65 @@ jobs:
                 job:
                     - os: ubuntu-latest
                       target: aarch64-unknown-linux-gnu
+                      libcec: vendored-libcec
                       use-cross: true
+                      expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: i686-unknown-linux-gnu
+                      libcec: vendored-libcec
                       use-cross: true
+                      expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: arm-unknown-linux-gnueabi
+                      libcec: vendored-libcec
                       use-cross: true
+                      expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: armv7-unknown-linux-gnueabihf
+                      libcec: vendored-libcec
                       use-cross: true
+                      expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: mips-unknown-linux-gnu
                       use-cross: true
+                      expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: mips64-unknown-linux-gnuabi64
+                      libcec: vendored-libcec
                       use-cross: true
+                      expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: mips64el-unknown-linux-gnuabi64
+                      libcec: vendored-libcec
                       use-cross: true
+                      expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: mipsel-unknown-linux-gnu
+                      libcec: vendored-libcec
                       use-cross: true
+                      expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
+                      libcec: vendored-libcec
                       use-cross: true
+                      expected_libcec_abi: 4
+                    #
+                    # libcec discovery with pkg config
+                    #
+                    - os: ubuntu-latest
+                      target: x86_64-unknown-linux-gnu
+                      use-cross: false # Important that we do not run cross so package install shows up
+                      libcec: libcec4
+                      libcec-dev: libcec-dev
+                      pkg-config: true
+                      expected_libcec_abi: 4
+                    - os: ubuntu-latest
+                      target: x86_64-unknown-linux-gnu
+                      use-cross: false # Important that we do not run cross so package install shows up
+                      libcec: libcec6_6.0.2-1ubuntu1_amd64.deb
+                      libcec-dev: libcec-dev_6.0.2-1ubuntu1_amd64.deb
+                      pkg-config: true
+                      expected_libcec_abi: 6
         steps:
             - name: Checkout repository
               uses: actions/checkout@v2
@@ -52,8 +86,44 @@ jobs:
                   profile: minimal
                   target: ${{ matrix.job.target }}
                   override: true
+            # libcec from apt repo:
+            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && endsWith(matrix.job.libcec, '.deb') }}
+              name: Install libcec (manually downloaded .deb)
+              run: |
+                  sudo apt-get install -yq libudev-dev libp8-platform2 libp8-platform-dev
+                  TEMP_DOWNLOAD="$(mktemp)" &&
+                  wget -O "$TEMP_DOWNLOAD" 'http://se.archive.ubuntu.com/ubuntu/pool/universe/libc/libcec/${{ matrix.job.libcec }}' &&
+                  sudo dpkg -i "$TEMP_DOWNLOAD"
+                  rm -f "$TEMP_DOWNLOAD"
+            # libcec-dev from apt repo:
+            - if: ${{ endsWith(matrix.job.libcec-dev, '.deb') }}
+              name: Install libcec-dev (manually downloaded .deb)
+              run: |
+                  sudo apt-get install -yq libudev-dev libp8-platform2 libp8-platform-dev
+                  TEMP_DOWNLOAD="$(mktemp)" &&
+                  wget -O "$TEMP_DOWNLOAD" 'http://se.archive.ubuntu.com/ubuntu/pool/universe/libc/libcec/${{ matrix.job.libcec-dev }}' &&
+                  sudo dpkg -i "$TEMP_DOWNLOAD"
+                  rm -f "$TEMP_DOWNLOAD"
+            # libcec from apt repo:
+            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && !endsWith(matrix.job.libcec, '.deb') }}
+              name: Install libcec(-dev) and build dependencies
+              run: sudo apt-get install -yq libudev-dev libp8-platform2 libp8-platform-dev ${{ matrix.job.libcec }} ${{ matrix.job.libcec-dev }}
+            # additional build dependencies for non-cross builds with vendored libcec sources
+            - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross }}
+              name: Install libudev-dev for non-cross vendored builds as libcec build dependency
+              run: sudo apt-get install -yq libudev-dev
+            # pkg-config install/remove
+            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && matrix.job.pkg-config }}
+              name: Install pkg-config for utilizing libcec from apt build dependency
+              run: sudo apt-get install -yq pkg-config
+            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && !matrix.job.pkg-config }}
+              name: Remove pkg-config
+              run: sudo apt-get remove -yq pkg-config
             - name: Cargo test
               uses: actions-rs/cargo@v1
+              env:
+                  EXPECTED_LIBCEC_VERSION_MAJOR: ${{ matrix.job.expected_libcec_abi }}
+                  CARGO_NET_GIT_FETCH_WITH_CLI: true
               with:
                   command: test
                   use-cross: ${{ matrix.job.use-cross }}
@@ -120,6 +190,8 @@ jobs:
               uses: actions-rs/tarpaulin@v0.1.3
               with:
                   args: "--ignore-tests --out Lcov"
+              env:
+                  EXPECTED_LIBCEC_VERSION_MAJOR: 4
             - name: Upload to Coveralls
               # upload only if push
               if: ${{ github.event_name == 'push' }}

@@ -2,11 +2,25 @@ extern crate enum_repr_derive;
 #[macro_use]
 extern crate derive_builder;
 
-mod enums;
+#[cfg(abi4)]
+mod enums4;
+#[cfg(abi4)]
+pub use enums4::*;
+#[cfg(abi5)]
+mod enums5;
+#[cfg(abi5)]
+pub use crate::enums5::*;
+
+#[cfg(abi6)]
+mod enums6;
+
+#[cfg(abi6)]
+pub use crate::enums6::*;
+#[cfg(all(not(abi4), not(abi5), not(abi6)))]
+compile_error!("BUG: libcec abi not detected");
 
 use log::{trace, warn};
 
-pub use self::enums::*;
 use std::{collections::HashSet, pin::Pin};
 
 use arrayvec::ArrayVec;
@@ -14,14 +28,14 @@ use libcec_sys::{
     cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_log_message,
     cec_logical_address, cec_logical_addresses, libcec_audio_get_status, libcec_audio_mute,
     libcec_audio_toggle_mute, libcec_audio_unmute, libcec_clear_configuration, libcec_close,
-    libcec_configuration, libcec_connection_t, libcec_destroy, libcec_enable_callbacks,
-    libcec_get_active_source, libcec_get_device_power_status, libcec_initialise,
-    libcec_is_active_source, libcec_mute_audio, libcec_open, libcec_power_on_devices,
-    libcec_send_key_release, libcec_send_keypress, libcec_set_active_source,
-    libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices,
-    libcec_switch_monitoring, libcec_transmit, libcec_volume_down, libcec_volume_up, ICECCallbacks,
-    LIBCEC_VERSION_CURRENT,
+    libcec_configuration, libcec_connection_t, libcec_destroy, libcec_get_active_source,
+    libcec_get_device_power_status, libcec_initialise, libcec_is_active_source, libcec_mute_audio,
+    libcec_open, libcec_power_on_devices, libcec_send_key_release, libcec_send_keypress,
+    libcec_set_active_source, libcec_set_inactive_view, libcec_set_logical_address,
+    libcec_standby_devices, libcec_switch_monitoring, libcec_transmit, libcec_volume_down,
+    libcec_volume_up, ICECCallbacks, LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
 };
+
 use num_traits::ToPrimitive;
 use std::convert::{TryFrom, TryInto};
 use std::ffi::{CStr, CString};
@@ -30,6 +44,48 @@ use std::time::Duration;
 use std::{mem, result};
 
 use std::fmt;
+
+#[cfg(test)]
+mod tests {
+
+    use libcec_sys::CEC_LIB_VERSION_MAJOR;
+    use std::env;
+
+    #[test]
+    fn test_abi_ci() {
+        if env::var("CI").is_err() {
+            // Not running in CI
+            return;
+        }
+        let expected_abi = env::var("EXPECTED_LIBCEC_VERSION_MAJOR")
+            .expect("CI needs to specify EXPECTED_LIBCEC_VERSION_MAJOR");
+
+        assert_eq!(
+            CEC_LIB_VERSION_MAJOR,
+            expected_abi
+                .parse()
+                .expect("Invalid EXPECTED_LIBCEC_VERSION_MAJOR: could not parse to number")
+        );
+    }
+
+    #[cfg(abi4)]
+    #[test]
+    fn test_abi4() {
+        assert_eq!(CEC_LIB_VERSION_MAJOR, 4);
+    }
+
+    #[cfg(abi5)]
+    #[test]
+    fn test_abi5() {
+        assert_eq!(CEC_LIB_VERSION_MAJOR, 5);
+    }
+
+    #[cfg(abi6)]
+    #[test]
+    fn test_abi6() {
+        assert_eq!(CEC_LIB_VERSION_MAJOR, 6);
+    }
+}
 
 fn first_n<const N: usize>(string: &str) -> [::std::os::raw::c_char; N] {
     let mut data: [::std::os::raw::c_char; N] = [0; N];
@@ -45,33 +101,35 @@ fn first_n<const N: usize>(string: &str) -> [::std::os::raw::c_char; N] {
 mod util_tests {
     use super::*;
 
+    #[allow(clippy::unnecessary_cast)]
     #[test]
     fn test_first_3() {
         assert_eq!(
             [b's' as _, b'a' as _, b'm' as _] as [::std::os::raw::c_char; 3],
-            first_n::<3>(&"sample")
+            first_n::<3>("sample")
         );
         assert_eq!(
             [b's' as _, b'a' as _, 0 as _] as [::std::os::raw::c_char; 3],
-            first_n::<3>(&"sa")
+            first_n::<3>("sa")
         );
         assert_eq!(
             [0 as _, 0 as _, 0 as _] as [::std::os::raw::c_char; 3],
-            first_n::<3>(&"")
+            first_n::<3>("")
         );
     }
 
+    #[allow(clippy::unnecessary_cast)]
     #[test]
     fn test_first_7() {
         assert_eq!(
             [b's' as _, b'a' as _, b'm' as _, b'p' as _, b'l' as _, b'e' as _, 0]
                 as [::std::os::raw::c_char; 7],
-            first_n::<7>(&"sample")
+            first_n::<7>("sample")
         );
     }
     #[test]
     fn test_first_0() {
-        assert_eq!([] as [::std::os::raw::c_char; 0], first_n::<0>(&"sample"));
+        assert_eq!([] as [::std::os::raw::c_char; 0], first_n::<0>("sample"));
     }
 }
 
@@ -1197,12 +1255,26 @@ impl CecConnectionCfg {
             return Err(CecConnectionResultError::AdapterOpenFailed);
         }
 
-        if unsafe {
-            libcec_enable_callbacks(connection.1, rust_callbacks_as_void_ptr, &mut CALLBACKS)
-        } == 0
-        {
+        #[cfg(abi4)]
+        let callback_ret = unsafe {
+            libcec_sys::libcec_enable_callbacks(
+                connection.1,
+                rust_callbacks_as_void_ptr,
+                &mut CALLBACKS,
+            )
+        };
+        #[cfg(not(abi4))]
+        let callback_ret = unsafe {
+            libcec_sys::libcec_set_callbacks(
+                connection.1,
+                &mut CALLBACKS,
+                rust_callbacks_as_void_ptr,
+            )
+        };
+        if callback_ret == 0 {
             return Err(CecConnectionResultError::CallbackRegistrationFailed);
         }
+
         Ok(connection)
     }
 }
@@ -1224,7 +1296,7 @@ impl From<&CecConnectionCfg> for libcec_configuration {
             libcec_clear_configuration(&mut cfg);
         }
         cfg.clientVersion = LIBCEC_VERSION_CURRENT;
-        cfg.strDeviceName = first_n::<13>(&config.device_name);
+        cfg.strDeviceName = first_n::<{ LIBCEC_OSD_NAME_SIZE as usize }>(&config.device_name);
         cfg.deviceTypes = config.device_types.clone().into();
         if let Some(v) = config.physical_address {
             cfg.iPhysicalAddress = v;
