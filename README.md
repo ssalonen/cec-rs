@@ -5,7 +5,7 @@
 [![CI](https://github.com/ssalonen/cec-rs/workflows/Continuous%20Integration/badge.svg)](https://github.com/ssalonen/cec-rs/actions)
 [![Coverage Status](https://coveralls.io/repos/github/ssalonen/cec-rs/badge.svg?branch=master)](https://coveralls.io/github/ssalonen/cec-rs?branch=master)
 
-Thin but safe wrappers for libcec
+Thin but safe wrappers for libcec. Supports libcec 4.x, 5.x and 6.x with an unified API.
 
 ## Installation
 

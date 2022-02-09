@@ -1,6 +1,6 @@
 [package]
 name = 'cec-rs'
-version = "3.0.1-alpha.0"
+version = "4.0.0-alpha.0"
 authors = ['Sami Salonen']
 edition = '2018'
 license = 'GPL-2.0'
@@ -21,8 +21,7 @@ derive_builder = '0.10.2'
 num-traits = '0.2.14'
 
 [dependencies.libcec-sys]
-#version = '2.0.1'
-path = 'libcec-sys-multi-abi'
+version = '3.0.0'
 
 [dependencies.enum-repr-derive]
 version = '0.2.0'

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 4.0.0
+
+- Depend on libcec-sys 3.0.0, supporting libcec 4.x, 5.x, and 6.x.
+
 ## 3.0.0
 
 - Depend on libcec-sys 2.0.0 which allows linking to system installed `libcec`
