@@ -66,14 +66,14 @@ jobs:
                     - os: ubuntu-22.04
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
-                      libcec: "?name(libcec4) ?version(4.*)"
+                      libcec: "libcec4"
                       libcec-dev: "libcec-dev=4*"
                       pkg-config: true
                       expected_libcec_abi: 4
                     - os: ubuntu-22.04
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
-                      libcec: "?name(libcec6) ?version(6.*)"
+                      libcec: "libcec6"
                       libcec-dev: "libcec-dev=6*"
                       pkg-config: true
                       expected_libcec_abi: 6
