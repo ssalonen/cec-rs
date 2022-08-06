@@ -93,7 +93,7 @@ jobs:
               run: |
                   sudo apt-get update
                   sudo apt-get install -yq libudev-dev libp8-platform2 libp8-platform-dev
-                  sudo apt install -yq ${{ matrix.job.libcec }}
+                  sudo apt install -yq '${{ matrix.job.libcec }}'
                   sudo apt install -yq '${{ matrix.job.libcec-dev }}'
             # additional build dependencies for non-cross builds with vendored libcec sources
             - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross }}
