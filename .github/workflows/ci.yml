@@ -66,15 +66,15 @@ jobs:
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
-                      libcec: libcec4
+                      libcec: libcec=4.0.4+dfsg1-4ubuntu3
                       libcec-dev: libcec-dev=4.0.4+dfsg1-4ubuntu3
                       pkg-config: true
                       expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
-                      libcec: libcec6_6.0.2-1ubuntu1_amd64.deb
-                      libcec-dev: libcec-dev_6.0.2-1ubuntu1_amd64.deb
+                      libcec: libcec=6.0.2-1ubuntu2
+                      libcec-dev: libcec-dev=6.0.2-1ubuntu2
                       pkg-config: true
                       expected_libcec_abi: 6
         steps:
