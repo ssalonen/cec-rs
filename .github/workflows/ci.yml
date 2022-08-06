@@ -95,11 +95,13 @@ jobs:
                   sudo sh -c 'echo "deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse" >> /etc/apt/sources.list'
                   sudo apt-get update
                   sudo apt-get install -yq libudev-dev libp8-platform2 libp8-platform-dev
-                  [[ $(apt list '${{ matrix.job.libcec }}' | grep cec | wc -l) != 1 ]] && echo "ERROR: Could not find libcec" && exit 1
+
                   apt list '${{ matrix.job.libcec }}'
+                  [[ $(apt list '${{ matrix.job.libcec }}' | grep cec | wc -l) != 1 ]] && echo "ERROR: Could not find libcec" && exit 1                  
                   sudo apt install -yq '${{ matrix.job.libcec }}'
-                  [[ $(apt list '${{ matrix.job.libcec-dev }}' | grep cec | wc -l) != 1 ]] && echo "ERROR: Could not find libcec-dev" && exit 1
+
                   apt list '${{ matrix.job.libcec-dev }}'
+                  [[ $(apt list '${{ matrix.job.libcec-dev }}' | grep cec | wc -l) != 1 ]] && echo "ERROR: Could not find libcec-dev" && exit 1                  
                   sudo apt install -yq '${{ matrix.job.libcec-dev }}'
             # additional build dependencies for non-cross builds with vendored libcec sources
             - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross }}
