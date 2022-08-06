@@ -15,47 +15,47 @@ jobs:
             matrix:
                 rust: [stable]
                 job:
-                    - os: ubuntu-latest
+                    - os: ubuntu-22.04
                       target: aarch64-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 4
-                    - os: ubuntu-latest
+                    - os: ubuntu-22.04
                       target: i686-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 4
-                    - os: ubuntu-latest
+                    - os: ubuntu-22.04
                       target: arm-unknown-linux-gnueabi
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 4
-                    - os: ubuntu-latest
+                    - os: ubuntu-22.04
                       target: armv7-unknown-linux-gnueabihf
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 4
-                    - os: ubuntu-latest
+                    - os: ubuntu-22.04
                       target: mips-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 4
-                    - os: ubuntu-latest
+                    - os: ubuntu-22.04
                       target: mips64-unknown-linux-gnuabi64
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 4
-                    - os: ubuntu-latest
+                    - os: ubuntu-22.04
                       target: mips64el-unknown-linux-gnuabi64
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 4
-                    - os: ubuntu-latest
+                    - os: ubuntu-22.04
                       target: mipsel-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 4
-                    - os: ubuntu-latest
+                    - os: ubuntu-22.04
                       target: x86_64-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
@@ -63,14 +63,14 @@ jobs:
                     #
                     # libcec discovery with pkg config
                     #
-                    - os: ubuntu-latest
+                    - os: ubuntu-22.04
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
                       libcec: "?name(libcec4?) ?version(4.*)"
                       libcec-dev: "?name(libcec-dev) ?version(4.*)"
                       pkg-config: true
                       expected_libcec_abi: 4
-                    - os: ubuntu-latest
+                    - os: ubuntu-22.04
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
                       libcec: "?name(libcec6?) ?version(6.*)"
@@ -124,7 +124,7 @@ jobs:
 
     rustfmt:
         name: Rustfmt
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04
         steps:
             - name: Checkout repository
               uses: actions/checkout@v2
@@ -143,7 +143,7 @@ jobs:
 
     clippy:
         name: Clippy
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04
         steps:
             - name: Checkout repository
               uses: actions/checkout@v2
@@ -164,7 +164,7 @@ jobs:
 
     coverage:
         name: Code coverage
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04
         steps:
             - name: Checkout repository
               uses: actions/checkout@v2
