@@ -67,14 +67,14 @@ jobs:
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
                       libcec: "?name(libcec4) ?version(4.*)"
-                      libcec-dev: "?name(libcec-dev) ?version(4.*)"
+                      libcec-dev: "libcec-dev=4*"
                       pkg-config: true
                       expected_libcec_abi: 4
                     - os: ubuntu-22.04
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
                       libcec: "?name(libcec6) ?version(6.*)"
-                      libcec-dev: "?name(libcec-dev) ?version(6.*)"
+                      libcec-dev: "libcec-dev=6*"
                       pkg-config: true
                       expected_libcec_abi: 6
         steps:
@@ -91,17 +91,16 @@ jobs:
             - if: ${{ !startsWith(matrix.job.libcec, 'vendored') }}
               name: Install libcec(-dev) and build dependencies
               run: |
+                  set -e
                   # introduce Ubuntu 20.04 (Focal Fossa) repos as well for easy libcec4 installation
                   sudo sh -c 'echo "deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse" >> /etc/apt/sources.list'
                   sudo apt-get update
                   sudo apt-get install -yq libudev-dev libp8-platform2 libp8-platform-dev
 
-                  apt list '${{ matrix.job.libcec }}'
-                  [[ $(apt list '${{ matrix.job.libcec }}' | grep cec | wc -l) != 1 ]] && echo "ERROR: Could not find libcec" && exit 1                  
+                  apt show '${{ matrix.job.libcec }}'
                   sudo apt install -yq '${{ matrix.job.libcec }}'
 
-                  apt list '${{ matrix.job.libcec-dev }}'
-                  [[ $(apt list '${{ matrix.job.libcec-dev }}' | grep cec | wc -l) != 1 ]] && echo "ERROR: Could not find libcec-dev" && exit 1                  
+                  apt show '${{ matrix.job.libcec-dev }}'
                   sudo apt install -yq '${{ matrix.job.libcec-dev }}'
             # additional build dependencies for non-cross builds with vendored libcec sources
             - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross }}
@@ -187,7 +186,7 @@ jobs:
               with:
                   args: "--ignore-tests --out Lcov"
               env:
-                  EXPECTED_LIBCEC_VERSION_MAJOR: 4
+                  EXPECTED_LIBCEC_VERSION_MAJOR: 6
             - name: Upload to Coveralls
               # upload only if push
               if: ${{ github.event_name == 'push' }}
