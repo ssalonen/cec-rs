@@ -66,14 +66,14 @@ jobs:
                     - os: ubuntu-22.04
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
-                      libcec: "?name(libcec4?) ?version(4.*)"
+                      libcec: "?name(libcec4) ?version(4.*)"
                       libcec-dev: "?name(libcec-dev) ?version(4.*)"
                       pkg-config: true
                       expected_libcec_abi: 4
                     - os: ubuntu-22.04
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
-                      libcec: "?name(libcec6?) ?version(6.*)"
+                      libcec: "?name(libcec6) ?version(6.*)"
                       libcec-dev: "?name(libcec-dev) ?version(6.*)"
                       pkg-config: true
                       expected_libcec_abi: 6
@@ -173,7 +173,7 @@ jobs:
             - name: Update apt
               run: sudo apt-get update
             - name: Install dependencies for build and coverage
-              run: sudo apt-get install libudev-dev libcec4 libcec-dev pkg-config libp8-platform-dev
+              run: sudo apt-get install libudev-dev libcec6 libcec-dev pkg-config libp8-platform-dev
             - name: Install stable toolchain
               uses: actions-rs/toolchain@v1
               with:
