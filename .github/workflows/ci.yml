@@ -66,15 +66,15 @@ jobs:
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
-                      libcec: libcec4=4.0.4+dfsg1-4ubuntu3
-                      libcec-dev: libcec-dev=4.0.4+dfsg1-4ubuntu3
+                      libcec: "?name(libcec4?) ?version(4.*)"
+                      libcec-dev: "?name(libcec-dev) ?version(4.*)"
                       pkg-config: true
                       expected_libcec_abi: 4
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
-                      libcec: libcec=6.0.2-1ubuntu2
-                      libcec-dev: libcec-dev=6.0.2-1ubuntu2
+                      libcec: "?name(libcec6?) ?version(6.*)"
+                      libcec-dev: "?name(libcec-dev) ?version(6.*)"
                       pkg-config: true
                       expected_libcec_abi: 6
         steps:
@@ -87,36 +87,23 @@ jobs:
                   profile: minimal
                   target: ${{ matrix.job.target }}
                   override: true
-            # libcec from apt repo:
-            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && endsWith(matrix.job.libcec, '.deb') }}
-              name: Install libcec (manually downloaded .deb)
-              run: |
-                  sudo apt-get install -yq libudev-dev libp8-platform2 libp8-platform-dev
-                  TEMP_DOWNLOAD="$(mktemp)" &&
-                  wget -O "$TEMP_DOWNLOAD" 'http://se.archive.ubuntu.com/ubuntu/pool/universe/libc/libcec/${{ matrix.job.libcec }}' &&
-                  sudo dpkg -i "$TEMP_DOWNLOAD"
-                  rm -f "$TEMP_DOWNLOAD"
-            # libcec-dev from apt repo:
-            - if: ${{ endsWith(matrix.job.libcec-dev, '.deb') }}
-              name: Install libcec-dev (manually downloaded .deb)
-              run: |
-                  sudo apt-get install -yq libudev-dev libp8-platform2 libp8-platform-dev
-                  TEMP_DOWNLOAD="$(mktemp)" &&
-                  wget -O "$TEMP_DOWNLOAD" 'http://se.archive.ubuntu.com/ubuntu/pool/universe/libc/libcec/${{ matrix.job.libcec-dev }}' &&
-                  sudo dpkg -i "$TEMP_DOWNLOAD"
-                  rm -f "$TEMP_DOWNLOAD"
-            # libcec from apt repo:
-            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && !endsWith(matrix.job.libcec, '.deb') }}
+            # libcec and p8-platform from apt repo
+            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') }}
               name: Install libcec(-dev) and build dependencies
-              run: sudo apt-get install -yq libudev-dev libp8-platform2 libp8-platform-dev ${{ matrix.job.libcec }} ${{ matrix.job.libcec-dev }}
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -yq libudev-dev libp8-platform2 libp8-platform-dev
+                  sudo apt install -yq ${{ matrix.job.libcec }}
+                  sudo apt install -yq '${{ matrix.job.libcec-dev }}'
             # additional build dependencies for non-cross builds with vendored libcec sources
             - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross }}
               name: Install libudev-dev for non-cross vendored builds as libcec build dependency
               run: sudo apt-get install -yq libudev-dev
-            # pkg-config install/remove
+            # pkg-config install
             - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && matrix.job.pkg-config }}
               name: Install pkg-config for utilizing libcec from apt build dependency
               run: sudo apt-get install -yq pkg-config
+            # pkg-config remove
             - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && !matrix.job.pkg-config }}
               name: Remove pkg-config
               run: sudo apt-get remove -yq pkg-config
