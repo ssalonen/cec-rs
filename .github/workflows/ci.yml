@@ -15,51 +15,61 @@ jobs:
             matrix:
                 rust: [stable]
                 job:
+                    - os: windows-latest
+                      target: x86_64-pc-windows-msvc
+                      use-cross: false
+                      libcec: vendored-libcec
+                      expected_libcec_abi: 6
+                    - os: windows-latest
+                      target: i686-pc-windows-msvc
+                      use-cross: false
+                      libcec: vendored-libcec
+                      expected_libcec_abi: 6
                     - os: ubuntu-22.04
                       target: aarch64-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
-                      expected_libcec_abi: 4
+                      expected_libcec_abi: 6
                     - os: ubuntu-22.04
                       target: i686-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
-                      expected_libcec_abi: 4
+                      expected_libcec_abi: 6
                     - os: ubuntu-22.04
                       target: arm-unknown-linux-gnueabi
                       use-cross: true
                       libcec: vendored-libcec
-                      expected_libcec_abi: 4
+                      expected_libcec_abi: 6
                     - os: ubuntu-22.04
                       target: armv7-unknown-linux-gnueabihf
                       use-cross: true
                       libcec: vendored-libcec
-                      expected_libcec_abi: 4
+                      expected_libcec_abi: 6
                     - os: ubuntu-22.04
                       target: mips-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
-                      expected_libcec_abi: 4
+                      expected_libcec_abi: 6
                     - os: ubuntu-22.04
                       target: mips64-unknown-linux-gnuabi64
                       use-cross: true
                       libcec: vendored-libcec
-                      expected_libcec_abi: 4
+                      expected_libcec_abi: 6
                     - os: ubuntu-22.04
                       target: mips64el-unknown-linux-gnuabi64
                       use-cross: true
                       libcec: vendored-libcec
-                      expected_libcec_abi: 4
+                      expected_libcec_abi: 6
                     - os: ubuntu-22.04
                       target: mipsel-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
-                      expected_libcec_abi: 4
+                      expected_libcec_abi: 6
                     - os: ubuntu-22.04
                       target: x86_64-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
-                      expected_libcec_abi: 4
+                      expected_libcec_abi: 6
                     #
                     # libcec discovery with pkg config
                     #
@@ -88,7 +98,7 @@ jobs:
                   target: ${{ matrix.job.target }}
                   override: true
             # libcec and p8-platform from apt repo
-            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') }}
+            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && runner.os == 'Linux' }}
               name: Install libcec(-dev) and build dependencies
               run: |
                   set -e
@@ -103,17 +113,25 @@ jobs:
                   apt show '${{ matrix.job.libcec-dev }}'
                   sudo apt install -yq '${{ matrix.job.libcec-dev }}'
             # additional build dependencies for non-cross builds with vendored libcec sources
-            - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross }}
+            - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross && runner.os == 'Linux' }}
               name: Install libudev-dev for non-cross vendored builds as libcec build dependency
               run: sudo apt-get install -yq libudev-dev
             # pkg-config install
-            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && matrix.job.pkg-config }}
+            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && matrix.job.pkg-config && runner.os == 'Linux' }}
               name: Install pkg-config for utilizing libcec from apt build dependency
               run: sudo apt-get install -yq pkg-config
             # pkg-config remove
-            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && !matrix.job.pkg-config }}
+            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && !matrix.job.pkg-config && runner.os == 'Linux' }}
               name: Remove pkg-config
               run: sudo apt-get remove -yq pkg-config
+            # install Python with debug binaries for Windows (needed for debug build of vendored libcec)
+            # Github Workflow runners do not package debug binaries by default
+            - if: runner.os == 'Windows'
+              name: Install python 3.10.5 with debug binaries
+              run: |
+                  $arch = '${{ runner.arch }}' -eq 'X86' ? "" : "-amd64"
+                  curl -o python-3.10.5$arch.exe https://www.python.org/ftp/python/3.10.5/python-3.10.5$arch.exe
+                  Start-Process -FilePath "python-3.10.5$arch.exe" -ArgumentList "/quiet Include_debug=1 PrependPath=1 InstallAllUsers=0" -Verb runas -Wait
             - name: Cargo test
               uses: actions-rs/cargo@v1
               env:
