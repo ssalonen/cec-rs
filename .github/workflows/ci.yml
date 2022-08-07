@@ -116,6 +116,10 @@ jobs:
             - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross && runner.os == 'Linux' }}
               name: Install libudev-dev for non-cross vendored builds as libcec build dependency
               run: sudo apt-get install -yq libudev-dev
+            # setup developer command prompt for Windows
+            - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross && runner.os == 'Windows' }}
+              name: Setup developer command prompt
+              uses: ilammy/msvc-dev-cmd@v1
             # pkg-config install
             - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && matrix.job.pkg-config && runner.os == 'Linux' }}
               name: Install pkg-config for utilizing libcec from apt build dependency
