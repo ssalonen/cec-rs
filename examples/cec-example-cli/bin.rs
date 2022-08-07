@@ -29,7 +29,7 @@ fn on_command_received(command: CecCommand) {
 fn on_log_level(log_message: CecLogMessage) {
     trace!(
         "logMessageRecieved:  time: {}, level: {}, message: {}",
-        log_message.time,
+        log_message.time.as_secs(),
         log_message.level,
         log_message.message
     );
