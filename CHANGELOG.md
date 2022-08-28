@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.0.0]
+
 - libcec-sys updated to v4.0.0, bringing Windows support and vendored libcec updated to v6
 - Updated to Rust 2021 edition
 
