@@ -15,16 +15,18 @@ jobs:
             matrix:
                 rust: [stable]
                 job:
-                    - os: windows-latest
-                      target: x86_64-pc-windows-msvc
-                      use-cross: false
-                      libcec: vendored-libcec
-                      expected_libcec_abi: 6
-                    - os: windows-latest
-                      target: i686-pc-windows-msvc
-                      use-cross: false
-                      libcec: vendored-libcec
-                      expected_libcec_abi: 6
+                # Windows disabled
+                # See https://github.com/ssalonen/cec-rs/issues/27
+                    # - os: windows-latest
+                    #   target: x86_64-pc-windows-msvc
+                    #   use-cross: false
+                    #   libcec: vendored-libcec
+                    #   expected_libcec_abi: 6
+                    # - os: windows-latest
+                    #   target: i686-pc-windows-msvc
+                    #   use-cross: false
+                    #   libcec: vendored-libcec
+                    #   expected_libcec_abi: 6
                     - os: ubuntu-22.04
                       target: aarch64-unknown-linux-gnu
                       use-cross: true
