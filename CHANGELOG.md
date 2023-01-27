@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `get_device_power_status` returns `CecPowerStatus` instead of `CecConnectionResult<()>`
+
 ## [6.0.0]
 
 - libcec-sys updated to v4.0.0, bringing Windows support and vendored libcec updated to v6

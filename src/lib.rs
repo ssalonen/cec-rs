@@ -26,14 +26,15 @@ use std::{collections::HashSet, pin::Pin};
 use arrayvec::ArrayVec;
 use libcec_sys::{
     cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_log_message,
-    cec_logical_address, cec_logical_addresses, libcec_audio_get_status, libcec_audio_mute,
-    libcec_audio_toggle_mute, libcec_audio_unmute, libcec_clear_configuration, libcec_close,
-    libcec_configuration, libcec_connection_t, libcec_destroy, libcec_get_active_source,
-    libcec_get_device_power_status, libcec_initialise, libcec_is_active_source, libcec_mute_audio,
-    libcec_open, libcec_power_on_devices, libcec_send_key_release, libcec_send_keypress,
-    libcec_set_active_source, libcec_set_inactive_view, libcec_set_logical_address,
-    libcec_standby_devices, libcec_switch_monitoring, libcec_transmit, libcec_volume_down,
-    libcec_volume_up, ICECCallbacks, LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
+    cec_logical_address, cec_logical_addresses, cec_power_status, libcec_audio_get_status,
+    libcec_audio_mute, libcec_audio_toggle_mute, libcec_audio_unmute, libcec_clear_configuration,
+    libcec_close, libcec_configuration, libcec_connection_t, libcec_destroy,
+    libcec_get_active_source, libcec_get_device_power_status, libcec_initialise,
+    libcec_is_active_source, libcec_mute_audio, libcec_open, libcec_power_on_devices,
+    libcec_send_key_release, libcec_send_keypress, libcec_set_active_source,
+    libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices,
+    libcec_switch_monitoring, libcec_transmit, libcec_volume_down, libcec_volume_up, ICECCallbacks,
+    LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
 };
 
 use num_traits::ToPrimitive;
@@ -1072,13 +1073,18 @@ impl CecConnection {
         }
     }
 
-    pub fn get_device_power_status(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
-        if unsafe { libcec_get_device_power_status(self.1, address.into()) } == 0 {
-            Err(CecConnectionResultError::TransmitFailed)
-        } else {
-            Ok(())
+    pub fn get_device_power_status(&self, address: CecLogicalAddress) -> CecPowerStatus {
+        let status_raw: cec_power_status =
+            unsafe { libcec_get_device_power_status(self.1, address.into()) };
+        match CecPowerStatus::try_from(status_raw) {
+            Ok(status) => status,
+            Err(status_raw) => {
+                warn!("get_device_power_status: Could not convert result {} to rust enum. Returning Unknown", status_raw);
+                CecPowerStatus::Unknown
+            }
         }
     }
+
     pub fn send_keypress(
         &self,
         address: CecLogicalAddress,
