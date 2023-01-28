@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `get_device_power_status` returns `CecPowerStatus` instead of `CecConnectionResult<()>`
+- MSRV defined: 1.56.1
 
 ## [6.0.0]
 
