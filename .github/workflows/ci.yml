@@ -204,16 +204,16 @@ jobs:
                   toolchain: stable
                   profile: minimal
                   override: true
-            - name: Run cargo-tarpaulin
-              uses: actions-rs/tarpaulin@v0.1.3
-              with:
-                  args: "--ignore-tests --out Lcov"
-              env:
-                  EXPECTED_LIBCEC_VERSION_MAJOR: 6
-            - name: Upload to Coveralls
-              # upload only if push
-              if: ${{ github.event_name == 'push' }}
-              uses: coverallsapp/github-action@master
-              with:
-                  github-token: ${{ secrets.GITHUB_TOKEN }}
-                  path-to-lcov: "./lcov.info"
+            # - name: Run cargo-tarpaulin
+            #   uses: actions-rs/tarpaulin@v0.1.3
+            #   with:
+            #       args: "--ignore-tests --out Lcov"
+            #   env:
+            #       EXPECTED_LIBCEC_VERSION_MAJOR: 6
+            # - name: Upload to Coveralls
+            #   # upload only if push
+            #   if: ${{ github.event_name == 'push' }}
+            #   uses: coverallsapp/github-action@master
+            #   with:
+            #       github-token: ${{ secrets.GITHUB_TOKEN }}
+            #       path-to-lcov: "./lcov.info"
