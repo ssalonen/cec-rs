@@ -29,12 +29,12 @@ use libcec_sys::{
     cec_logical_address, cec_logical_addresses, cec_power_status, libcec_audio_get_status,
     libcec_audio_mute, libcec_audio_toggle_mute, libcec_audio_unmute, libcec_clear_configuration,
     libcec_close, libcec_configuration, libcec_connection_t, libcec_destroy,
-    libcec_get_active_source, libcec_get_device_power_status, libcec_initialise,
-    libcec_is_active_source, libcec_mute_audio, libcec_open, libcec_power_on_devices,
-    libcec_send_key_release, libcec_send_keypress, libcec_set_active_source,
-    libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices,
-    libcec_switch_monitoring, libcec_transmit, libcec_volume_down, libcec_volume_up, ICECCallbacks,
-    LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
+    libcec_get_active_source, libcec_get_device_power_status, libcec_get_logical_addresses,
+    libcec_initialise, libcec_is_active_source, libcec_mute_audio, libcec_open,
+    libcec_power_on_devices, libcec_send_key_release, libcec_send_keypress,
+    libcec_set_active_source, libcec_set_inactive_view, libcec_set_logical_address,
+    libcec_standby_devices, libcec_switch_monitoring, libcec_transmit, libcec_volume_down,
+    libcec_volume_up, ICECCallbacks, LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
 };
 
 use num_traits::ToPrimitive;
@@ -524,8 +524,8 @@ impl fmt::Display for CecLogLevel {
 /// Collection of logical addresses, with one primary address
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CecLogicalAddresses {
-    primary: KnownCecLogicalAddress,
-    addresses: HashSet<KnownAndRegisteredCecLogicalAddress>,
+    pub primary: KnownCecLogicalAddress,
+    pub addresses: HashSet<KnownAndRegisteredCecLogicalAddress>,
 }
 
 impl CecLogicalAddresses {
@@ -568,6 +568,37 @@ impl CecLogicalAddresses {
                 })
             }
         }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum TryFromCecLogicalAddressesError {
+    UnknownPrimaryAddress,
+    InvalidPrimaryAddress,
+}
+
+impl TryFrom<cec_logical_addresses> for CecLogicalAddresses {
+    type Error = TryFromCecLogicalAddressesError;
+    fn try_from(addresses: cec_logical_addresses) -> Result<Self, Self::Error> {
+        let primary = CecLogicalAddress::try_from(addresses.primary)
+            .map_err(|_| TryFromCecLogicalAddressesError::UnknownPrimaryAddress)?;
+        let primary = KnownCecLogicalAddress::new(primary)
+            .ok_or(TryFromCecLogicalAddressesError::InvalidPrimaryAddress)?;
+
+        let addresses = HashSet::from_iter(addresses.addresses.into_iter().enumerate().filter_map(
+            |(addr, mask)| {
+                let addr = addr as i32;
+                if mask == 1 {
+                    KnownAndRegisteredCecLogicalAddress::new(
+                        CecLogicalAddress::try_from(addr).ok()?,
+                    )
+                } else {
+                    None
+                }
+            },
+        ));
+
+        Ok(Self { primary, addresses })
     }
 }
 
@@ -642,7 +673,14 @@ mod logical_addresses_tests {
             ffi_addresses.primary,
             CecLogicalAddress::Unregistered.into()
         );
-        assert_eq!(ffi_addresses.addresses, [0; 16])
+        assert_eq!(ffi_addresses.addresses, [0; 16]);
+
+        let rust_addresses = CecLogicalAddresses::try_from(ffi_addresses).unwrap();
+        assert_eq!(
+            rust_addresses.primary,
+            KnownCecLogicalAddress(CecLogicalAddress::Unregistered)
+        );
+        assert!(rust_addresses.addresses.is_empty());
     }
 
     #[test]
@@ -656,7 +694,14 @@ mod logical_addresses_tests {
             CecLogicalAddress::Playbackdevice1.into()
         );
         // addresses mask should be all zeros
-        assert_eq!(ffi_addresses.addresses, [0; 16])
+        assert_eq!(ffi_addresses.addresses, [0; 16]);
+
+        let rust_addresses = CecLogicalAddresses::try_from(ffi_addresses).unwrap();
+        assert_eq!(
+            rust_addresses.primary,
+            KnownCecLogicalAddress(CecLogicalAddress::Playbackdevice1)
+        );
+        assert!(rust_addresses.addresses.is_empty());
     }
 
     #[test]
@@ -698,7 +743,12 @@ mod logical_addresses_tests {
                 _ => assert_eq!(0, *mask_value),
             }
         }
+
+        let rust_addresses = CecLogicalAddresses::try_from(ffi_addresses).unwrap();
+        assert_eq!(rust_addresses.primary, non_ffi.primary);
+        assert_eq!(rust_addresses.addresses, non_ffi.addresses);
     }
+
     #[test]
     fn test_unregistered_primary_no_others() {
         let expected = Some(CecLogicalAddresses::with_only_primary(
@@ -1190,6 +1240,12 @@ impl CecConnection {
         }
     }
 
+    pub fn get_logical_addresses(
+        &self,
+    ) -> Result<CecLogicalAddresses, TryFromCecLogicalAddressesError> {
+        CecLogicalAddresses::try_from(unsafe { libcec_get_logical_addresses(self.1) })
+    }
+
     // Unimplemented:
     // extern DECLSPEC int libcec_set_physical_address(libcec_connection_t connection, uint16_t iPhysicalAddress);
     // extern DECLSPEC int libcec_set_deck_control_mode(libcec_connection_t connection, CEC_NAMESPACE cec_deck_control_mode mode, int bSendUpdate);
@@ -1208,7 +1264,6 @@ impl CecConnection {
     // extern DECLSPEC int libcec_get_device_osd_name(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iAddress, CEC_NAMESPACE cec_osd_name name);
     // extern DECLSPEC int libcec_set_stream_path_logical(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iAddress);
     // extern DECLSPEC int libcec_set_stream_path_physical(libcec_connection_t connection, uint16_t iPhysicalAddress);
-    // extern DECLSPEC CEC_NAMESPACE cec_logical_addresses libcec_get_logical_addresses(libcec_connection_t connection);
     // extern DECLSPEC int libcec_get_current_configuration(libcec_connection_t connection, CEC_NAMESPACE libcec_configuration* configuration);
     // extern DECLSPEC int libcec_can_persist_configuration(libcec_connection_t connection);
     // extern DECLSPEC int libcec_persist_configuration(libcec_connection_t connection, CEC_NAMESPACE libcec_configuration* configuration);

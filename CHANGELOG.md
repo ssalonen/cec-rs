@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add `get_logical_addresses()`
+
 ## [7.0.0]
 
 - `get_device_power_status` returns `CecPowerStatus` instead of `CecConnectionResult<()>`
