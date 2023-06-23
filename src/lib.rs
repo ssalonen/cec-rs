@@ -580,7 +580,6 @@ pub enum TryFromCecLogicalAddressesError {
 impl TryFrom<cec_logical_addresses> for CecLogicalAddresses {
     type Error = TryFromCecLogicalAddressesError;
     fn try_from(addresses: cec_logical_addresses) -> Result<Self, Self::Error> {
-
         let primary = CecLogicalAddress::try_from(addresses.primary)
             .map_err(|_| TryFromCecLogicalAddressesError::InvalidPrimaryAddress)?;
         let primary = KnownCecLogicalAddress::new(primary)
