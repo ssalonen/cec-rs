@@ -535,7 +535,7 @@ impl CecLogicalAddresses {
             addresses: HashSet::new(),
         }
     }
-    /// Create CecLogicalAddresses from primary address and secondary addresses    
+    /// Create CecLogicalAddresses from primary address and secondary addresses
     ///
     /// # Arguments
     ///
@@ -580,17 +580,19 @@ pub enum TryFromCecLogicalAddressesError {
 impl TryFrom<cec_logical_addresses> for CecLogicalAddresses {
     type Error = TryFromCecLogicalAddressesError;
     fn try_from(addresses: cec_logical_addresses) -> Result<Self, Self::Error> {
+
         let primary = CecLogicalAddress::try_from(addresses.primary)
-            .map_err(|_| TryFromCecLogicalAddressesError::UnknownPrimaryAddress)?;
+            .map_err(|_| TryFromCecLogicalAddressesError::InvalidPrimaryAddress)?;
         let primary = KnownCecLogicalAddress::new(primary)
-            .ok_or(TryFromCecLogicalAddressesError::InvalidPrimaryAddress)?;
+            .ok_or(TryFromCecLogicalAddressesError::UnknownPrimaryAddress)?;
 
         let addresses = HashSet::from_iter(addresses.addresses.into_iter().enumerate().filter_map(
-            |(addr, mask)| {
-                let addr = addr as i32;
-                if mask == 1 {
+            |(logical_addr, addr_mask)| {
+                let logical_addr = logical_addr as i32;
+                // If logical address x is in use, addresses.addresses[x] != 0.
+                if addr_mask != 0 {
                     KnownAndRegisteredCecLogicalAddress::new(
-                        CecLogicalAddress::try_from(addr).ok()?,
+                        CecLogicalAddress::try_from(logical_addr).ok()?,
                     )
                 } else {
                     None
@@ -675,6 +677,7 @@ mod logical_addresses_tests {
         );
         assert_eq!(ffi_addresses.addresses, [0; 16]);
 
+        // try converting back
         let rust_addresses = CecLogicalAddresses::try_from(ffi_addresses).unwrap();
         assert_eq!(
             rust_addresses.primary,
@@ -696,6 +699,7 @@ mod logical_addresses_tests {
         // addresses mask should be all zeros
         assert_eq!(ffi_addresses.addresses, [0; 16]);
 
+        // try converting back
         let rust_addresses = CecLogicalAddresses::try_from(ffi_addresses).unwrap();
         assert_eq!(
             rust_addresses.primary,
@@ -744,6 +748,7 @@ mod logical_addresses_tests {
             }
         }
 
+        // try converting back
         let rust_addresses = CecLogicalAddresses::try_from(ffi_addresses).unwrap();
         assert_eq!(rust_addresses.primary, non_ffi.primary);
         assert_eq!(rust_addresses.addresses, non_ffi.addresses);
