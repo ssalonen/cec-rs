@@ -1241,9 +1241,9 @@ impl CecConnectionCfg {
         let mut cfg: libcec_configuration = (&self).into();
         // Consume self.*_callback and build CecCallbacks from those
         let pinned_callbacks = Box::pin(CecCallbacks {
-            key_press_callback: std::mem::replace(&mut self.key_press_callback, None),
-            command_received_callback: std::mem::replace(&mut self.command_received_callback, None),
-            log_message_callbacks: std::mem::replace(&mut self.log_message_callback, None),
+            key_press_callback: self.key_press_callback.take(),
+            command_received_callback: self.command_received_callback.take(),
+            log_message_callbacks: self.log_message_callback.take(),
         });
         let rust_callbacks_as_void_ptr = &*pinned_callbacks as *const _ as *mut _;
         let port = CString::new(self.port.clone()).expect("Invalid port name");
