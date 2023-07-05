@@ -9,11 +9,9 @@ Thin but safe wrappers for libcec. Supports libcec 4.x, 5.x and 6.x with an unif
 
 ## Installation
 
-### Cargo
+This library uses `libcec-sys` to link against `libcec` library. For installation instructions, refer to [`libcec-sys`](https://crates.io/crates/libcec-sys) README.
 
-* Install the rust toolchain in order to have cargo installed by following
-  [this](https://www.rust-lang.org/tools/install) guide.
-* run `cargo install cec-rs`
+
 
 ## Example CLI application
 

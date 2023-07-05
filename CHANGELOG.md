@@ -7,14 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 7.1.0
+
 - Add `get_logical_addresses()`
 
-## [7.0.0]
+## 7.0.0
 
 - `get_device_power_status` returns `CecPowerStatus` instead of `CecConnectionResult<()>`
 - MSRV defined: 1.56.1
 
-## [6.0.0]
+## 6.0.0
 
 - libcec-sys updated to v4.0.0, bringing Windows support and vendored libcec updated to v6
 - Updated to Rust 2021 edition
