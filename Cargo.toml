@@ -23,7 +23,7 @@ derive_builder = '0.10.2'
 num-traits = '0.2.14'
 
 [dependencies.libcec-sys]
-git = "https://github.com/ssalonen/libcecy-sys.git"
+git = "https://github.com/ssalonen/libcec-sys.git"
 branch = "ci-win-debug"
 
 
