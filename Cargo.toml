@@ -23,7 +23,9 @@ derive_builder = '0.10.2'
 num-traits = '0.2.14'
 
 [dependencies.libcec-sys]
-version = '4.0.0'
+git = "https://github.com/ssalonen/libcecy-sys.git"
+branch = "ci-win-debug"
+
 
 [dependencies.enum-repr-derive]
 version = '0.2.0'
