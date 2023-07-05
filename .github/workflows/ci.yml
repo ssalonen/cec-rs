@@ -13,7 +13,6 @@ jobs:
         runs-on: ${{ matrix.job.os }}
         strategy:
             matrix:
-                rust: [stable]
                 job:
                 # Windows disabled
                 # See https://github.com/ssalonen/cec-rs/issues/27
@@ -27,47 +26,47 @@ jobs:
                     #   use-cross: false
                     #   libcec: vendored-libcec
                     #   expected_libcec_abi: 6
-                    - os: ubuntu-22.04
+                    - os: ubuntu-latest
                       target: aarch64-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 6
-                    - os: ubuntu-22.04
+                    - os: ubuntu-latest
                       target: i686-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 6
-                    - os: ubuntu-22.04
+                    - os: ubuntu-latest
                       target: arm-unknown-linux-gnueabi
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 6
-                    - os: ubuntu-22.04
+                    - os: ubuntu-latest
                       target: armv7-unknown-linux-gnueabihf
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 6
-                    - os: ubuntu-22.04
+                    - os: ubuntu-latest
                       target: mips-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 6
-                    - os: ubuntu-22.04
+                    - os: ubuntu-latest
                       target: mips64-unknown-linux-gnuabi64
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 6
-                    - os: ubuntu-22.04
+                    - os: ubuntu-latest
                       target: mips64el-unknown-linux-gnuabi64
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 6
-                    - os: ubuntu-22.04
+                    - os: ubuntu-latest
                       target: mipsel-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 6
-                    - os: ubuntu-22.04
+                    - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
                       use-cross: true
                       libcec: vendored-libcec
@@ -75,14 +74,14 @@ jobs:
                     #
                     # libcec discovery with pkg config
                     #
-                    - os: ubuntu-22.04
+                    - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
                       libcec: "libcec4"
                       libcec-dev: "libcec-dev=4*"
                       pkg-config: true
                       expected_libcec_abi: 4
-                    - os: ubuntu-22.04
+                    - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
                       libcec: "libcec6"
@@ -92,21 +91,25 @@ jobs:
         steps:
             - name: Checkout repository
               uses: actions/checkout@v2
+            - if: runner.os == 'Linux'
+              name: Apt-get update
+              run: sudo apt-get update -yq
             - name: Installing Rust toolchain
               uses: actions-rs/toolchain@v1
               with:
-                  toolchain: ${{ matrix.rust }}
+                  toolchain: stable
                   profile: minimal
                   target: ${{ matrix.job.target }}
                   override: true
+            - uses: Swatinem/rust-cache@v1
             # libcec and p8-platform from apt repo
             - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && runner.os == 'Linux' }}
               name: Install libcec(-dev) and build dependencies
               run: |
-                  set -e
+                  set -ex
                   # introduce Ubuntu 20.04 (Focal Fossa) repos as well for easy libcec4 installation
                   sudo sh -c 'echo "deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse" >> /etc/apt/sources.list'
-                  sudo apt-get update
+                  sudo apt-get update  # re-loads apt sources
                   sudo apt-get install -yq libudev-dev libp8-platform2 libp8-platform-dev
 
                   apt show '${{ matrix.job.libcec }}'
@@ -146,42 +149,22 @@ jobs:
               with:
                   command: test
                   use-cross: ${{ matrix.job.use-cross }}
-                  toolchain: ${{ matrix.rust }}
                   args: --target ${{ matrix.job.target }} -vv
 
-    rustfmt:
-        name: Rustfmt
-        runs-on: ubuntu-22.04
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v2
-            - name: Install Rust
-              uses: actions-rs/toolchain@v1
+              uses: actions/checkout@v3
               with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
-                  components: rustfmt
-            - name: Check formatting
+                  submodules: recursive
+            - name: Rustfmt check
               uses: actions-rs/cargo@v1
               with:
                   command: fmt
                   args: --all -- --check
-
-    clippy:
-        name: Clippy
-        runs-on: ubuntu-22.04
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v2
-            - name: Install Rust
-              uses: actions-rs/toolchain@v1
-              with:
-                  toolchain: stable
-                  profile: minimal
-                  override: true
-                  target: x86_64-unknown-linux-gnu
-                  components: clippy
+            # need to use cross to setup dependencies
             - name: Clippy Check
               uses: actions-rs/cargo@v1
               with:
@@ -191,12 +174,12 @@ jobs:
 
     coverage:
         name: Code coverage
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-latest
         steps:
             - name: Checkout repository
               uses: actions/checkout@v2
             - name: Update apt
-              run: sudo apt-get update
+              run: sudo apt-get update -yq
             - name: Install dependencies for build and coverage
               run: sudo apt-get install libudev-dev libcec6 libcec-dev pkg-config libp8-platform-dev
             - name: Install stable toolchain
