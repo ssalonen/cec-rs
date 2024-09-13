@@ -1075,7 +1075,7 @@ pub enum CecConnectionResultError {
 pub struct CecConnection(
     pub CecConnectionCfg,
     libcec_connection_t,
-    Pin<Box<CecCallbacks>>,
+    #[allow(dead_code)] Pin<Box<CecCallbacks>>,
 );
 
 impl CecConnection {
