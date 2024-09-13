@@ -41,6 +41,7 @@ use num_traits::ToPrimitive;
 use std::convert::{TryFrom, TryInto};
 use std::ffi::{CStr, CString};
 use std::os::raw::c_void;
+use std::ptr::addr_of_mut;
 use std::time::Duration;
 use std::{mem, result};
 
@@ -1325,14 +1326,14 @@ impl CecConnectionCfg {
             libcec_sys::libcec_enable_callbacks(
                 connection.1,
                 rust_callbacks_as_void_ptr,
-                &mut CALLBACKS,
+                addr_of_mut!(CALLBACKS),
             )
         };
         #[cfg(not(abi4))]
         let callback_ret = unsafe {
             libcec_sys::libcec_set_callbacks(
                 connection.1,
-                &mut CALLBACKS,
+                addr_of_mut!(CALLBACKS),
                 rust_callbacks_as_void_ptr,
             )
         };
