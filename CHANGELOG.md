@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add adapter auto detection for unspecified port
+
 ## 7.1.1
 
 - Require libcec >= 4.0.3 for fixed windows compatibility
