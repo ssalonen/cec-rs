@@ -1120,12 +1120,8 @@ impl CecConnection {
         }
     }
 
-    pub fn is_active_source(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
-        if unsafe { libcec_is_active_source(self.1, address.into()) } == 0 {
-            Err(CecConnectionResultError::TransmitFailed)
-        } else {
-            Ok(())
-        }
+    pub fn is_active_source(&self, address: CecLogicalAddress) -> bool {
+        (unsafe { libcec_is_active_source(self.1, address.into()) }) != 0
     }
 
     pub fn get_device_power_status(&self, address: CecLogicalAddress) -> CecPowerStatus {
