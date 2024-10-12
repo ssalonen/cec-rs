@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Fix `is_active_source` result
+- Fix calling `libcec_close` twice on drop
 
 ## 7.1.1
 
