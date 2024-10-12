@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add adapter auto detection for unspecified port
 - Fix `is_active_source` result
 - Fix calling `libcec_close` twice on drop
 
