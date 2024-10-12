@@ -31,3 +31,6 @@ version = '0.2.0'
 
 [badges.maintenance]
 status = 'passively-maintained'
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(abi4)', 'cfg(abi5)', 'cfg(abi6)'] }

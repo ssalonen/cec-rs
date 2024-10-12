@@ -28,13 +28,23 @@ use libcec_sys::{
     cec_audio_status, cec_command, cec_datapacket, cec_device_type_list, cec_keypress,
     cec_log_message, cec_logical_address, cec_logical_addresses, cec_power_status,
     libcec_audio_get_status, libcec_audio_mute, libcec_audio_toggle_mute, libcec_audio_unmute,
-    libcec_clear_configuration, libcec_close, libcec_configuration, libcec_connection_t,
+    libcec_clear_configuration, libcec_configuration, libcec_connection_t,
     libcec_destroy, libcec_get_active_source, libcec_get_device_power_status,
     libcec_get_logical_addresses, libcec_initialise, libcec_is_active_source, libcec_mute_audio,
     libcec_open, libcec_power_on_devices, libcec_send_key_release, libcec_send_keypress,
     libcec_set_active_source, libcec_set_inactive_view, libcec_set_logical_address,
     libcec_standby_devices, libcec_switch_monitoring, libcec_transmit, libcec_volume_down,
     libcec_volume_up, ICECCallbacks, LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
+    cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_log_message,
+    cec_logical_address, cec_logical_addresses, cec_power_status, libcec_audio_get_status,
+    libcec_audio_mute, libcec_audio_toggle_mute, libcec_audio_unmute, libcec_clear_configuration,
+    libcec_configuration, libcec_connection_t, libcec_destroy, libcec_get_active_source,
+    libcec_get_device_power_status, libcec_get_logical_addresses, libcec_initialise,
+    libcec_is_active_source, libcec_mute_audio, libcec_open, libcec_power_on_devices,
+    libcec_send_key_release, libcec_send_keypress, libcec_set_active_source,
+    libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices,
+    libcec_switch_monitoring, libcec_transmit, libcec_volume_down, libcec_volume_up, ICECCallbacks,
+    LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
 };
 
 use num_traits::ToPrimitive;
@@ -42,6 +52,7 @@ use std::cmp::min;
 use std::convert::{TryFrom, TryInto};
 use std::ffi::{CStr, CString};
 use std::os::raw::c_void;
+use std::ptr::addr_of_mut;
 use std::time::Duration;
 use std::{mem, result};
 
@@ -1193,7 +1204,7 @@ pub enum CecConnectionResultError {
 pub struct CecConnection(
     pub CecConnectionCfg,
     libcec_connection_t,
-    Pin<Box<CecCallbacks>>,
+    #[allow(dead_code)] Pin<Box<CecCallbacks>>,
 );
 
 impl CecConnection {
@@ -1440,14 +1451,14 @@ impl CecConnectionCfg {
             libcec_sys::libcec_enable_callbacks(
                 connection.1,
                 rust_callbacks_as_void_ptr,
-                &mut CALLBACKS,
+                addr_of_mut!(CALLBACKS),
             )
         };
         #[cfg(not(abi4))]
         let callback_ret = unsafe {
             libcec_sys::libcec_set_callbacks(
                 connection.1,
-                &mut CALLBACKS,
+                addr_of_mut!(CALLBACKS),
                 rust_callbacks_as_void_ptr,
             )
         };
@@ -1462,7 +1473,6 @@ impl CecConnectionCfg {
 impl Drop for CecConnection {
     fn drop(&mut self) {
         unsafe {
-            libcec_close(self.1);
             libcec_destroy(self.1);
         }
     }
