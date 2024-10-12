@@ -50,6 +50,7 @@ use num_traits::ToPrimitive;
 use std::cmp::min;
 use std::convert::{TryFrom, TryInto};
 use std::ffi::{CStr, CString};
+use std::mem::MaybeUninit;
 use std::os::raw::c_void;
 use std::ptr::addr_of_mut;
 use std::time::Duration;
@@ -1098,7 +1099,9 @@ pub struct CecConnectionCfg {
     #[builder(default, setter(strip_option), pattern = "owned")]
     pub log_message_callback: Option<Box<FnLogMessage>>,
 
-    pub port: String,
+    #[doc = "< the COM port to connect to. leave this untouched to autodetect"]
+    #[builder(default, setter(strip_option))]
+    pub port: Option<String>,
 
     #[builder(default = "Duration::from_secs(5)")]
     pub open_timeout: Duration,
@@ -1248,12 +1251,8 @@ impl CecConnection {
         }
     }
 
-    pub fn is_active_source(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
-        if unsafe { libcec_is_active_source(self.1, address.into()) } == 0 {
-            Err(CecConnectionResultError::TransmitFailed)
-        } else {
-            Ok(())
-        }
+    pub fn is_active_source(&self, address: CecLogicalAddress) -> bool {
+        (unsafe { libcec_is_active_source(self.1, address.into()) }) != 0
     }
 
     pub fn get_device_power_status(&self, address: CecLogicalAddress) -> CecPowerStatus {
@@ -1430,8 +1429,6 @@ impl CecConnectionCfg {
             log_message_callbacks: self.log_message_callback.take(),
         });
         let rust_callbacks_as_void_ptr = &*pinned_callbacks as *const _ as *mut _;
-        let port = CString::new(self.port.clone()).expect("Invalid port name");
-        let open_timeout = self.open_timeout.as_millis() as u32;
         let connection = CecConnection(
             self,
             unsafe { libcec_initialise(&mut cfg) },
@@ -1441,9 +1438,36 @@ impl CecConnectionCfg {
             return Err(CecConnectionResultError::LibInitFailed);
         }
 
-        if unsafe { libcec_open(connection.1, port.as_ptr(), open_timeout) } == 0 {
-            return Err(CecConnectionResultError::AdapterOpenFailed);
-        }
+        let open_timeout = connection.0.open_timeout.as_millis() as u32;
+        match &connection.0.port {
+            Some(port) => {
+                let port = CString::new(port.as_str()).expect("Invalid port name");
+                if unsafe { libcec_open(connection.1, port.as_ptr(), open_timeout) } == 0 {
+                    return Err(CecConnectionResultError::AdapterOpenFailed);
+                }
+            }
+            None => {
+                let mut adapters = MaybeUninit::<[libcec_sys::cec_adapter_descriptor; 1]>::uninit();
+                let num_adapters = unsafe {
+                    libcec_sys::libcec_detect_adapters(
+                        connection.1,
+                        adapters.as_mut_ptr() as *mut _,
+                        1,
+                        std::ptr::null(),
+                        true as i32,
+                    )
+                };
+
+                if num_adapters == 0 {
+                    return Err(CecConnectionResultError::NoAdapterFound);
+                }
+
+                let port = unsafe { adapters.assume_init() }[0].strComName;
+                if unsafe { libcec_open(connection.1, port.as_ptr(), open_timeout) == 0 } {
+                    return Err(CecConnectionResultError::AdapterOpenFailed);
+                }
+            }
+        };
 
         #[cfg(abi4)]
         let callback_ret = unsafe {
