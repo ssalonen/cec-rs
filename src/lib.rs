@@ -1283,52 +1283,46 @@ impl CecConnection {
         }
     }
 
-    pub fn volume_up(&self, send_release: bool) -> CecConnectionResult<()> {
-        if unsafe { libcec_volume_up(self.1, send_release.into()) } == 0 {
-            Err(CecConnectionResultError::TransmitFailed)
-        } else {
-            Ok(())
+    pub fn volume_up(
+        &self,
+        send_release: bool,
+    ) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
+        match u8::try_from(unsafe { libcec_volume_up(self.1, send_release.into()) }) {
+            Ok(status) => KnownCecAudioStatus::try_from(status),
+            Err(_) => Err(TryFromCecAudioStatusError::Unknown),
         }
     }
 
-    pub fn volume_down(&self, send_release: bool) -> CecConnectionResult<()> {
-        if unsafe { libcec_volume_down(self.1, send_release.into()) } == 0 {
-            Err(CecConnectionResultError::TransmitFailed)
-        } else {
-            Ok(())
+    pub fn volume_down(
+        &self,
+        send_release: bool,
+    ) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
+        match u8::try_from(unsafe { libcec_volume_down(self.1, send_release.into()) }) {
+            Ok(status) => KnownCecAudioStatus::try_from(status),
+            Err(_) => Err(TryFromCecAudioStatusError::Unknown),
         }
     }
 
-    pub fn mute_audio(&self, send_release: bool) -> CecConnectionResult<()> {
-        if unsafe { libcec_mute_audio(self.1, send_release.into()) } == 0 {
-            Err(CecConnectionResultError::TransmitFailed)
-        } else {
-            Ok(())
+    pub fn mute_audio(
+        &self,
+        send_release: bool,
+    ) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
+        match u8::try_from(unsafe { libcec_mute_audio(self.1, send_release.into()) }) {
+            Ok(status) => KnownCecAudioStatus::try_from(status),
+            Err(_) => Err(TryFromCecAudioStatusError::Unknown),
         }
     }
 
-    pub fn audio_toggle_mute(&self) -> CecConnectionResult<()> {
-        if unsafe { libcec_audio_toggle_mute(self.1) } == 0 {
-            Err(CecConnectionResultError::TransmitFailed)
-        } else {
-            Ok(())
-        }
+    pub fn audio_toggle_mute(&self) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
+        KnownCecAudioStatus::try_from(unsafe { libcec_audio_toggle_mute(self.1) })
     }
 
-    pub fn audio_mute(&self) -> CecConnectionResult<()> {
-        if unsafe { libcec_audio_mute(self.1) } == 0 {
-            Err(CecConnectionResultError::TransmitFailed)
-        } else {
-            Ok(())
-        }
+    pub fn audio_mute(&self) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
+        KnownCecAudioStatus::try_from(unsafe { libcec_audio_mute(self.1) })
     }
 
-    pub fn audio_unmute(&self) -> CecConnectionResult<()> {
-        if unsafe { libcec_audio_unmute(self.1) } == 0 {
-            Err(CecConnectionResultError::TransmitFailed)
-        } else {
-            Ok(())
-        }
+    pub fn audio_unmute(&self) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
+        KnownCecAudioStatus::try_from(unsafe { libcec_audio_unmute(self.1) })
     }
 
     pub fn audio_get_status(&self) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
