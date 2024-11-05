@@ -39,7 +39,7 @@ pub fn main() {
     env_logger::init();
 
     let cfg = CecConnectionCfgBuilder::default()
-        .port("RPI".into())
+        .port(c"RPI".into())
         .device_name("Hifiberry".into())
         .key_press_callback(Box::new(on_key_press))
         .command_received_callback(Box::new(on_command_received))

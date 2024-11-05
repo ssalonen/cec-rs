@@ -1092,7 +1092,7 @@ pub struct CecConnectionCfg {
 
     #[doc = "< the COM port to connect to. leave this untouched to autodetect"]
     #[builder(default, setter(strip_option))]
-    pub port: Option<String>,
+    pub port: Option<CString>,
 
     #[builder(default = "Duration::from_secs(5)")]
     pub open_timeout: Duration,
@@ -1407,10 +1407,6 @@ impl CecConnectionCfg {
     /// - LibInitFailed: libcec_sys::libcec_initialise fails
     /// - AdapterOpenFailed: libcec_sys::libcec_open fails
     /// - CallbackRegistrationFailed: libcec_sys::libcec_enable_callbacks fails
-    ///
-    /// # Panics
-    ///
-    /// Panics if self.port contains internal 0 byte
     pub fn open(mut self) -> CecConnectionResult<CecConnection> {
         let mut cfg: libcec_configuration = (&self).into();
         // Consume self.*_callback and build CecCallbacks from those
@@ -1432,7 +1428,6 @@ impl CecConnectionCfg {
         let open_timeout = connection.0.open_timeout.as_millis() as u32;
         match &connection.0.port {
             Some(port) => {
-                let port = CString::new(port.as_str()).expect("Invalid port name");
                 if unsafe { libcec_open(connection.1, port.as_ptr(), open_timeout) } == 0 {
                     return Err(CecConnectionResultError::AdapterOpenFailed);
                 }
