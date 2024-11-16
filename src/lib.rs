@@ -1486,6 +1486,16 @@ impl Drop for CecConnection {
     }
 }
 
+// libcec doesn't use thread local storage, so it's safe to send
+// CecConnection across threads.
+unsafe impl Send for CecConnection {}
+
+// libcec guards interior mutability behind mutex locks. It's hard to
+// verify that their implementation is perfectly thread safe, but they
+// wouldn't be using mutexes if they weren't aiming for thread safety,
+// so we trust that their implementation is correct.
+unsafe impl Sync for CecConnection {}
+
 impl From<&CecConnectionCfg> for libcec_configuration {
     fn from(config: &CecConnectionCfg) -> libcec_configuration {
         let mut cfg: libcec_configuration;
