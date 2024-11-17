@@ -32,9 +32,10 @@ use libcec_sys::{
     libcec_get_active_source, libcec_get_device_power_status, libcec_get_logical_addresses,
     libcec_initialise, libcec_is_active_source, libcec_mute_audio, libcec_open,
     libcec_power_on_devices, libcec_send_key_release, libcec_send_keypress,
-    libcec_set_active_source, libcec_set_inactive_view, libcec_set_logical_address,
-    libcec_standby_devices, libcec_switch_monitoring, libcec_transmit, libcec_volume_down,
-    libcec_volume_up, ICECCallbacks, LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
+    libcec_set_active_source, libcec_set_deck_control_mode, libcec_set_deck_info,
+    libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices,
+    libcec_switch_monitoring, libcec_transmit, libcec_volume_down, libcec_volume_up, ICECCallbacks,
+    LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
 };
 
 use num_traits::ToPrimitive;
@@ -1345,6 +1346,12 @@ impl CecConnection {
         }
     }
 
+    pub fn get_logical_addresses(
+        &self,
+    ) -> Result<CecLogicalAddresses, TryFromCecLogicalAddressesError> {
+        CecLogicalAddresses::try_from(unsafe { libcec_get_logical_addresses(self.1) })
+    }
+
     pub fn switch_monitoring(&self, enable: bool) -> CecConnectionResult<()> {
         if unsafe { libcec_switch_monitoring(self.1, enable.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
@@ -1353,16 +1360,28 @@ impl CecConnection {
         }
     }
 
-    pub fn get_logical_addresses(
+    pub fn set_deck_control_mode(
         &self,
-    ) -> Result<CecLogicalAddresses, TryFromCecLogicalAddressesError> {
-        CecLogicalAddresses::try_from(unsafe { libcec_get_logical_addresses(self.1) })
+        mode: CecDeckControlMode,
+        send_update: bool,
+    ) -> CecConnectionResult<()> {
+        if unsafe { libcec_set_deck_control_mode(self.1, mode.into(), send_update.into()) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn set_deck_info(&self, info: CecDeckInfo, send_update: bool) -> CecConnectionResult<()> {
+        if unsafe { libcec_set_deck_info(self.1, info.into(), send_update.into()) } == 0 {
+            Err(CecConnectionResultError::TransmitFailed)
+        } else {
+            Ok(())
+        }
     }
 
     // Unimplemented:
     // extern DECLSPEC int libcec_set_physical_address(libcec_connection_t connection, uint16_t iPhysicalAddress);
-    // extern DECLSPEC int libcec_set_deck_control_mode(libcec_connection_t connection, CEC_NAMESPACE cec_deck_control_mode mode, int bSendUpdate);
-    // extern DECLSPEC int libcec_set_deck_info(libcec_connection_t connection, CEC_NAMESPACE cec_deck_info info, int bSendUpdate);
     // extern DECLSPEC int libcec_set_menu_state(libcec_connection_t connection, CEC_NAMESPACE cec_menu_state state, int bSendUpdate);
     // extern DECLSPEC int libcec_set_osd_string(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress, CEC_NAMESPACE cec_display_control duration, const char* strMessage);
     // extern DECLSPEC CEC_NAMESPACE cec_version libcec_get_device_cec_version(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress);
