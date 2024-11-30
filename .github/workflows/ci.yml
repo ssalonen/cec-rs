@@ -118,7 +118,114 @@ jobs:
                   command: test
                   use-cross: ${{ matrix.job.use-cross }}
                   args: --target ${{ matrix.job.target }} -vv
+    example-cli:
+        name: Build example CLI
+        runs-on: ${{ matrix.job.os }}
+        strategy:
+          matrix:
+              job:
+                  - os: windows-latest
+                    target: x86_64-pc-windows-msvc
+                    use-cross: false
+                    libcec: vendored-libcec
+                    expected_libcec_abi: 6
+                  # - os: ubuntu-latest
+                  #   target: aarch64-unknown-linux-gnu
+                  #   use-cross: true
+                  #   libcec: vendored-libcec
+                  #   expected_libcec_abi: 6
+                  # - os: ubuntu-latest
+                  #   target: arm-unknown-linux-gnueabi
+                  #   use-cross: true
+                  #   libcec: vendored-libcec
+                  #   expected_libcec_abi: 6
+                  # - os: ubuntu-latest
+                  #   target: armv7-unknown-linux-gnueabihf
+                  #   use-cross: true
+                  #   libcec: vendored-libcec
+                  #   expected_libcec_abi: 6
+                  # - os: ubuntu-latest
+                  #   target: x86_64-unknown-linux-gnu
+                  #   use-cross: true
+                  #   libcec: vendored-libcec
+                  #   expected_libcec_abi: 6
+                  # #
+                  # # libcec discovery with pkg config
+                  # #
+                  # - os: ubuntu-latest
+                  #   target: x86_64-unknown-linux-gnu
+                  #   use-cross: false # Important that we do not run cross so package install shows up
+                  #   libcec: "libcec4"
+                  #   libcec-dev: "libcec-dev=4*"
+                  #   pkg-config: true
+                  #   expected_libcec_abi: 4
+                  # - os: ubuntu-latest
+                  #   target: x86_64-unknown-linux-gnu
+                  #   use-cross: false # Important that we do not run cross so package install shows up
+                  #   libcec: "libcec6"
+                  #   libcec-dev: "libcec-dev=6*"
+                  #   pkg-config: true
+                  #   expected_libcec_abi: 6
+        steps:
+          - name: Checkout repository
+            uses: actions/checkout@v2
+          - if: runner.os == 'Linux'
+            name: Apt-get update
+            run: sudo apt-get update -yq
+          - name: Installing Rust toolchain
+            uses: actions-rs/toolchain@v1
+            with:
+                toolchain: stable
+                profile: minimal
+                target: ${{ matrix.job.target }}
+                override: true
+          - uses: Swatinem/rust-cache@v2
+          # libcec and p8-platform from apt repo
+          - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && runner.os == 'Linux' }}
+            name: Install libcec(-dev) and build dependencies
+            run: |
+                set -ex
+                # introduce Ubuntu 20.04 (Focal Fossa) repos as well for easy libcec4 installation
+                sudo sh -c 'echo "deb http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse" >> /etc/apt/sources.list'
+                sudo apt-get update  # re-loads apt sources
+                sudo apt-get install -yq libudev-dev libp8-platform2 libp8-platform-dev
 
+                apt show '${{ matrix.job.libcec }}'
+                sudo apt install -yq '${{ matrix.job.libcec }}'
+
+                apt show '${{ matrix.job.libcec-dev }}'
+                sudo apt install -yq '${{ matrix.job.libcec-dev }}'
+          # additional build dependencies for non-cross builds with vendored libcec sources
+          - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross && runner.os == 'Linux' }}
+            name: Install libudev-dev for non-cross vendored builds as libcec build dependency
+            run: sudo apt-get install -yq libudev-dev
+          # setup developer command prompt for Windows
+          - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross && runner.os == 'Windows' }}
+            name: Setup developer command prompt
+            uses: ilammy/msvc-dev-cmd@v1
+          # pkg-config install
+          - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && matrix.job.pkg-config && runner.os == 'Linux' }}
+            name: Install pkg-config for utilizing libcec from apt build dependency
+            run: sudo apt-get install -yq pkg-config
+          # pkg-config remove
+          - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && !matrix.job.pkg-config && runner.os == 'Linux' }}
+            name: Remove pkg-config
+            run: sudo apt-get remove -yq pkg-config
+          # install Python with debug binaries for Windows (needed for debug build of vendored libcec)
+          # Github Workflow runners do not package debug binaries by default
+          # NOTE: 
+          - if: runner.os == 'Windows'
+            name: Install python 3.11.4 with debug binaries
+            run: |
+                $arch = '${{ runner.arch }}' -eq 'X86' ? "" : "-amd64"
+                curl -o python-3.11.4$arch.exe https://www.python.org/ftp/python/3.11.4/python-3.11.4$arch.exe
+                Start-Process -FilePath "python-3.11.4$arch.exe" -ArgumentList "/quiet Include_debug=1 PrependPath=1 InstallAllUsers=0" -Verb runas -Wait
+          - name: Cargo build example
+            uses: actions-rs/cargo@v1
+            with:
+                command: build
+                use-cross: ${{ matrix.job.use-cross }}
+                args: --manifest-path=examples/cec-example-cli/Cargo.toml --target ${{ matrix.job.target }} -vv
     lint:
         name: Lint
         runs-on: ubuntu-latest
