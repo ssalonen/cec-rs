@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 8.0.1
+
+- fixed release, libcec 5.0.1
+
 ## 8.0.0
 
 - Fix `audio_get_status` result
