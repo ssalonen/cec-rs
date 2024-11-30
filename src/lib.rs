@@ -2,10 +2,20 @@ extern crate enum_repr_derive;
 #[macro_use]
 extern crate derive_builder;
 
+#[cfg(abi4)]
+mod enums4;
+#[cfg(abi4)]
+pub use enums4::*;
+#[cfg(abi5)]
+mod enums5;
+#[cfg(abi5)]
+pub use crate::enums5::*;
 
-mod enums;
-pub use crate::enums::*;
+#[cfg(abi6)]
+mod enums6;
 
+#[cfg(abi6)]
+pub use crate::enums6::*;
 #[cfg(all(not(abi4), not(abi5), not(abi6)))]
 compile_error!("BUG: libcec abi not detected");
 
@@ -15,7 +25,17 @@ use std::{collections::HashSet, pin::Pin};
 
 use arrayvec::ArrayVec;
 use libcec_sys::{
-    cec_audio_status, cec_command, cec_datapacket, cec_device_type_list, cec_keypress, cec_log_message, cec_logical_address, cec_logical_addresses, cec_power_status, libcec_audio_get_status, libcec_audio_mute, libcec_audio_toggle_mute, libcec_audio_unmute, libcec_clear_configuration, libcec_configuration, libcec_connection_t, libcec_destroy, libcec_get_active_source, libcec_get_device_power_status, libcec_get_logical_addresses, libcec_initialise, libcec_is_active_source, libcec_mute_audio, libcec_open, libcec_power_on_devices, libcec_send_key_release, libcec_send_keypress, libcec_set_active_source, libcec_set_deck_control_mode, libcec_set_deck_info, libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices, libcec_switch_monitoring, libcec_transmit, libcec_version, libcec_volume_down, libcec_volume_up, ICECCallbacks, LIBCEC_OSD_NAME_SIZE,
+    cec_audio_status, cec_command, cec_datapacket, cec_device_type_list, cec_keypress,
+    cec_log_message, cec_logical_address, cec_logical_addresses, cec_power_status,
+    libcec_audio_get_status, libcec_audio_mute, libcec_audio_toggle_mute, libcec_audio_unmute,
+    libcec_clear_configuration, libcec_configuration, libcec_connection_t, libcec_destroy,
+    libcec_get_active_source, libcec_get_device_power_status, libcec_get_logical_addresses,
+    libcec_initialise, libcec_is_active_source, libcec_mute_audio, libcec_open,
+    libcec_power_on_devices, libcec_send_key_release, libcec_send_keypress,
+    libcec_set_active_source, libcec_set_deck_control_mode, libcec_set_deck_info,
+    libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices,
+    libcec_switch_monitoring, libcec_transmit, libcec_volume_down, libcec_volume_up, ICECCallbacks,
+    LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
 };
 
 use num_traits::ToPrimitive;
@@ -120,24 +140,24 @@ mod util_tests {
 
 /// cec_audio_status which does not allow CEC_AUDIO_VOLUME_STATUS_UNKNOWN
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct KnownCecAudioStatus(cec_audio_status);
+pub struct KnownCecAudioStatus(u8);
 
 impl KnownCecAudioStatus {
-    pub fn new(volume: u32, is_muted: bool) -> Self {
-        let volume = min(volume, libcec_sys::cec_audio_status_VOLUME_MAX as u32);
-        KnownCecAudioStatus(if is_muted {
-            volume | (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u32)
+    pub fn new(volume: u8, is_muted: bool) -> Self {
+        let volume = min(volume, libcec_sys::CEC_AUDIO_VOLUME_MAX as u8);
+        Self(if is_muted {
+            volume | (libcec_sys::CEC_AUDIO_MUTE_STATUS_MASK as u8)
         } else {
             volume
         })
     }
 
-    pub fn volume(self) -> u32 {
-        self.0 & (libcec_sys::cec_audio_status_VOLUME_STATUS_MASK as u32)
+    pub fn volume(self) -> u8 {
+        self.0 & (libcec_sys::CEC_AUDIO_VOLUME_STATUS_MASK as u8)
     }
 
     pub fn is_muted(self) -> bool {
-        self.0 & (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u32) != 0
+        self.0 & (libcec_sys::CEC_AUDIO_MUTE_STATUS_MASK as u8) != 0
     }
 }
 
@@ -147,17 +167,17 @@ pub enum TryFromCecAudioStatusError {
     Unknown,
 }
 
-impl TryFrom<u32> for KnownCecAudioStatus {
+impl TryFrom<u8> for KnownCecAudioStatus {
     type Error = TryFromCecAudioStatusError;
 
-    fn try_from(status: u32) -> Result<Self, Self::Error> {
-        let volume = status & (libcec_sys::cec_audio_status_VOLUME_STATUS_MASK as u32);
-        if volume > libcec_sys::cec_audio_status_VOLUME_MAX as u32 {
-            if volume == libcec_sys::cec_audio_status_VOLUME_STATUS_UNKNOWN as u32 {
+    fn try_from(status: u8) -> Result<Self, Self::Error> {
+        let volume = status & (libcec_sys::CEC_AUDIO_VOLUME_STATUS_MASK as u8);
+        if volume > libcec_sys::CEC_AUDIO_VOLUME_MAX as u8 {
+            if volume == libcec_sys::CEC_AUDIO_VOLUME_STATUS_UNKNOWN as u8 {
                 Err(Self::Error::Unknown)
             } else {
                 Err(Self::Error::Reserved(
-                    volume as u8 - (libcec_sys::cec_audio_status_VOLUME_MAX as u8) - 1,
+                    volume - (libcec_sys::CEC_AUDIO_VOLUME_MAX as u8) - 1,
                 ))
             }
         } else {
@@ -166,9 +186,15 @@ impl TryFrom<u32> for KnownCecAudioStatus {
     }
 }
 
-impl From<KnownCecAudioStatus> for cec_audio_status {
+impl From<KnownCecAudioStatus> for u8 {
     fn from(status: KnownCecAudioStatus) -> Self {
         status.0
+    }
+}
+
+impl From<KnownCecAudioStatus> for cec_audio_status {
+    fn from(status: KnownCecAudioStatus) -> Self {
+        status.0.into()
     }
 }
 
@@ -178,55 +204,55 @@ mod audiostatus_tests {
 
     #[test]
     pub fn test_min_volume() {
-        let raw = libcec_sys::cec_audio_status_VOLUME_MIN as u32;
+        let raw = libcec_sys::CEC_AUDIO_VOLUME_MIN as u8;
         let status = KnownCecAudioStatus::try_from(raw).unwrap();
-        assert_eq!(status.volume(), 0u32);
+        assert_eq!(status.volume(), 0u8);
         assert_eq!(status.is_muted(), false);
 
-        let status = KnownCecAudioStatus::new(0u32, false);
-        assert_eq!(cec_audio_status::from(status), raw);
+        let status = KnownCecAudioStatus::new(0u8, false);
+        assert_eq!(u8::from(status), raw);
     }
 
     #[test]
     pub fn test_max_volume() {
-        let raw = libcec_sys::cec_audio_status_VOLUME_MAX as u32;
+        let raw = libcec_sys::CEC_AUDIO_VOLUME_MAX as u8;
         let status = KnownCecAudioStatus::try_from(raw).unwrap();
-        assert_eq!(status.volume(), 100u32);
+        assert_eq!(status.volume(), 100u8);
         assert_eq!(status.is_muted(), false);
 
-        let status = KnownCecAudioStatus::new(100u32, false);
-        assert_eq!(cec_audio_status::from(status), raw);
+        let status = KnownCecAudioStatus::new(100u8, false);
+        assert_eq!(u8::from(status), raw);
     }
 
     #[test]
     pub fn test_muted_volume() {
-        let raw = 75u32 | (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u32);
+        let raw = 75u8 | (libcec_sys::CEC_AUDIO_MUTE_STATUS_MASK as u8);
         let status = KnownCecAudioStatus::try_from(raw).unwrap();
-        assert_eq!(status.volume(), 75u32);
+        assert_eq!(status.volume(), 75u8);
         assert_eq!(status.is_muted(), true);
 
-        let status = KnownCecAudioStatus::new(75u32, true);
-        assert_eq!(cec_audio_status::from(status), raw);
+        let status = KnownCecAudioStatus::new(75u8, true);
+        assert_eq!(u8::from(status), raw);
     }
 
     #[test]
     pub fn test_reserved_volume() {
-        let raw = libcec_sys::cec_audio_status_VOLUME_MAX as u32 + 3;
+        let raw = libcec_sys::CEC_AUDIO_VOLUME_MAX as u8 + 3;
         let status = KnownCecAudioStatus::try_from(raw);
         assert_eq!(status, Err(TryFromCecAudioStatusError::Reserved(2)));
 
         let status = KnownCecAudioStatus::new(raw, false);
-        assert_eq!(cec_audio_status::from(status), 100);
+        assert_eq!(u8::from(status), 100);
     }
 
     #[test]
     pub fn test_unknown_volume() {
-        let raw = libcec_sys::cec_audio_status_VOLUME_STATUS_UNKNOWN as u32;
+        let raw = libcec_sys::CEC_AUDIO_VOLUME_STATUS_UNKNOWN as u8;
         let status = KnownCecAudioStatus::try_from(raw);
         assert_eq!(status, Err(TryFromCecAudioStatusError::Unknown));
 
         let status = KnownCecAudioStatus::new(raw, false);
-        assert_eq!(cec_audio_status::from(status), 100);
+        assert_eq!(u8::from(status), 100);
     }
 }
 
@@ -434,7 +460,7 @@ impl From<CecCommand> for cec_command {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TryFromCecCommandError {
-    UnknownCecOpcode,
+    UnknownOpcode,
     UnknownInitiator,
     UnknownDestination,
 }
@@ -444,7 +470,7 @@ impl core::convert::TryFrom<cec_command> for CecCommand {
 
     fn try_from(command: cec_command) -> std::result::Result<Self, Self::Error> {
         let opcode = CecOpcode::try_from(command.opcode)
-            .map_err(|_| TryFromCecCommandError::UnknownCecOpcode)?;
+            .map_err(|_| TryFromCecCommandError::UnknownOpcode)?;
         let initiator = CecLogicalAddress::try_from(command.initiator)
             .map_err(|_| TryFromCecCommandError::UnknownInitiator)?;
         let destination = CecLogicalAddress::try_from(command.destination)
@@ -565,9 +591,9 @@ mod command_tests {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TryFromCecLogMessageError {
     MessageParseError,
-    CecLogLevelParseError,
+    LogLevelParseError,
     TimestampParseError,
-    UnknownCecLogLevel,
+    UnknownLogLevel,
 }
 
 #[derive(Clone)]
@@ -590,7 +616,7 @@ impl core::convert::TryFrom<cec_log_message> for CecLogMessage {
             .map_err(|_| TryFromCecLogMessageError::MessageParseError)?
             .to_owned();
         let level = CecLogLevel::try_from(log_message.level)
-            .map_err(|_| TryFromCecLogMessageError::CecLogLevelParseError)?;
+            .map_err(|_| TryFromCecLogMessageError::LogLevelParseError)?;
         let time = log_message
             .time
             .try_into()
@@ -909,12 +935,12 @@ impl core::convert::TryFrom<cec_keypress> for CecKeypress {
 mod keypress_tests {
     use super::*;
 
-    use libcec_sys::cec_user_control_code_UP;
+    use libcec_sys::CEC_USER_CONTROL_CODE_UP;
 
     #[test]
     fn test_keypress_from_ffi_known_code() {
         let keypress: CecKeypress = cec_keypress {
-            keycode: cec_user_control_code_UP,
+            keycode: CEC_USER_CONTROL_CODE_UP,
             duration: 300,
         }
         .try_into()
@@ -1262,7 +1288,7 @@ impl CecConnection {
         &self,
         send_release: bool,
     ) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
-        match cec_audio_status::try_from(unsafe { libcec_volume_up(self.1, send_release.into()) }) {
+        match u8::try_from(unsafe { libcec_volume_up(self.1, send_release.into()) }) {
             Ok(status) => KnownCecAudioStatus::try_from(status),
             Err(_) => Err(TryFromCecAudioStatusError::Unknown),
         }
@@ -1272,7 +1298,7 @@ impl CecConnection {
         &self,
         send_release: bool,
     ) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
-        match cec_audio_status::try_from(unsafe { libcec_volume_down(self.1, send_release.into()) }) {
+        match u8::try_from(unsafe { libcec_volume_down(self.1, send_release.into()) }) {
             Ok(status) => KnownCecAudioStatus::try_from(status),
             Err(_) => Err(TryFromCecAudioStatusError::Unknown),
         }
@@ -1282,26 +1308,26 @@ impl CecConnection {
         &self,
         send_release: bool,
     ) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
-        match cec_audio_status::try_from(unsafe { libcec_mute_audio(self.1, send_release.into()) }) {
+        match u8::try_from(unsafe { libcec_mute_audio(self.1, send_release.into()) }) {
             Ok(status) => KnownCecAudioStatus::try_from(status),
             Err(_) => Err(TryFromCecAudioStatusError::Unknown),
         }
     }
 
     pub fn audio_toggle_mute(&self) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
-        KnownCecAudioStatus::try_from(unsafe { libcec_audio_toggle_mute(self.1) } as cec_audio_status)
+        KnownCecAudioStatus::try_from(unsafe { libcec_audio_toggle_mute(self.1) })
     }
 
     pub fn audio_mute(&self) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
-        KnownCecAudioStatus::try_from(unsafe { libcec_audio_mute(self.1) } as cec_audio_status)
+        KnownCecAudioStatus::try_from(unsafe { libcec_audio_mute(self.1) })
     }
 
     pub fn audio_unmute(&self) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
-        KnownCecAudioStatus::try_from(unsafe { libcec_audio_unmute(self.1) } as cec_audio_status)
+        KnownCecAudioStatus::try_from(unsafe { libcec_audio_unmute(self.1) })
     }
 
     pub fn audio_get_status(&self) -> Result<KnownCecAudioStatus, TryFromCecAudioStatusError> {
-        KnownCecAudioStatus::try_from(unsafe { libcec_audio_get_status(self.1) }as cec_audio_status)
+        KnownCecAudioStatus::try_from(unsafe { libcec_audio_get_status(self.1) })
     }
 
     pub fn set_inactive_view(&self) -> CecConnectionResult<()> {
@@ -1357,12 +1383,12 @@ impl CecConnection {
     // Unimplemented:
     // extern DECLSPEC int libcec_set_physical_address(libcec_connection_t connection, uint16_t iPhysicalAddress);
     // extern DECLSPEC int libcec_set_menu_state(libcec_connection_t connection, CEC_NAMESPACE cec_menu_state state, int bSendUpdate);
-    // extern DECLSPEC int libcec_set_osd_string(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iCecLogicalAddress, CEC_NAMESPACE cec_display_control duration, const char* strMessage);
-    // extern DECLSPEC CEC_NAMESPACE cec_version libcec_get_device_cec_version(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iCecLogicalAddress);
-    // extern DECLSPEC int libcec_get_device_menu_language(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iCecLogicalAddress, CEC_NAMESPACE cec_menu_language language);
-    // extern DECLSPEC uint32_t libcec_get_device_vendor_id(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iCecLogicalAddress);
-    // extern DECLSPEC uint16_t libcec_get_device_physical_address(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iCecLogicalAddress);
-    // extern DECLSPEC int libcec_poll_device(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iCecLogicalAddress);
+    // extern DECLSPEC int libcec_set_osd_string(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress, CEC_NAMESPACE cec_display_control duration, const char* strMessage);
+    // extern DECLSPEC CEC_NAMESPACE cec_version libcec_get_device_cec_version(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress);
+    // extern DECLSPEC int libcec_get_device_menu_language(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress, CEC_NAMESPACE cec_menu_language language);
+    // extern DECLSPEC uint32_t libcec_get_device_vendor_id(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress);
+    // extern DECLSPEC uint16_t libcec_get_device_physical_address(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress);
+    // extern DECLSPEC int libcec_poll_device(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address iLogicalAddress);
     // extern DECLSPEC CEC_NAMESPACE cec_logical_addresses libcec_get_active_devices(libcec_connection_t connection);
     // extern DECLSPEC int libcec_is_active_device(libcec_connection_t connection, CEC_NAMESPACE cec_logical_address address);
     // extern DECLSPEC int libcec_is_active_device_type(libcec_connection_t connection, CEC_NAMESPACE cec_device_type type);
@@ -1491,7 +1517,7 @@ impl From<&CecConnectionCfg> for libcec_configuration {
             cfg = mem::zeroed::<libcec_configuration>();
             libcec_clear_configuration(&mut cfg);
         }
-        cfg.clientVersion = libcec_sys::libcec_version_CURRENT as _;
+        cfg.clientVersion = LIBCEC_VERSION_CURRENT;
         cfg.strDeviceName = first_n::<{ LIBCEC_OSD_NAME_SIZE as usize }>(&config.device_name);
         cfg.deviceTypes = config.device_types.clone().into();
         if let Some(v) = config.physical_address {
