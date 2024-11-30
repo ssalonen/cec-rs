@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 8.0.0
+
 - Fix `audio_get_status` result
 - Add adapter auto detection for unspecified port
 - Fix `is_active_source` result
 - Fix calling `libcec_close` twice on drop
+- Adapted to libcec 5.0.0 API
 
 ## 7.1.1
 

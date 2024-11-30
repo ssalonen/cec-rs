@@ -2,7 +2,7 @@
 name = 'cec-rs'
 # Do note msrv setting in clippy.toml as well
 rust-version = "1.56.1"
-version = "7.1.2-alpha.0"
+version = "8.0.1-alpha.0"
 authors = ['Sami Salonen']
 edition = '2021'
 license = 'GPL-2.0'
@@ -23,8 +23,7 @@ derive_builder = '0.10.2'
 num-traits = '0.2.14'
 
 [dependencies.libcec-sys]
-version = '4.0.3'
-
+version = '5.0.1'
 
 [dependencies.enum-repr-derive]
 version = '0.2.0'
