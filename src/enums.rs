@@ -268,7 +268,8 @@ pub enum CecProgrammedInfo {
         libcec_sys::cec_programmed_info_ENOUGH_SPACE_AVAILABLE_FOR_RECORDING,
     NotEnoughSpaceAvailableForRecording =
         libcec_sys::cec_programmed_info_NOT_ENOUGH_SPACE_AVAILABLE_FOR_RECORDING,
-    MayNotBeEnoughSpaceAvailable = libcec_sys::cec_programmed_info_MAY_NOT_BE_ENOUGH_SPACE_AVAILABLE,
+    MayNotBeEnoughSpaceAvailable =
+        libcec_sys::cec_programmed_info_MAY_NOT_BE_ENOUGH_SPACE_AVAILABLE,
     NoMediaInfoAvailable = libcec_sys::cec_programmed_info_NO_MEDIA_INFO_AVAILABLE,
 }
 #[repr(u32)]
@@ -285,7 +286,8 @@ pub enum CecNotProgrammedErrorInfo {
     CaSystemNotSupported = libcec_sys::cec_not_programmed_error_info_CA_SYSTEM_NOT_SUPPORTED,
     NoOrInsufficientCaEntitlements =
         libcec_sys::cec_not_programmed_error_info_NO_OR_INSUFFICIENT_CA_ENTITLEMENTS,
-    DoesNotSupportResolution = libcec_sys::cec_not_programmed_error_info_DOES_NOT_SUPPORT_RESOLUTION,
+    DoesNotSupportResolution =
+        libcec_sys::cec_not_programmed_error_info_DOES_NOT_SUPPORT_RESOLUTION,
     ParentalLockOn = libcec_sys::cec_not_programmed_error_info_PARENTAL_LOCK_ON,
     ClockFailure = libcec_sys::cec_not_programmed_error_info_CLOCK_FAILURE,
     ReservedForFutureUseStart =
