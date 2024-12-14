@@ -2,7 +2,7 @@
 name = 'cec-rs'
 # Do note msrv setting in clippy.toml as well
 rust-version = "1.56.1"
-version = "10.0.0"
+version = "10.0.1-alpha.0"
 authors = ['Sami Salonen']
 edition = '2021'
 license = 'GPL-2.0'
