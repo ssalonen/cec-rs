@@ -147,7 +147,14 @@ impl KnownCecAudioStatus {
     }
 
     pub fn is_muted(self) -> bool {
-        self.0 & (libcec_sys::cec_audio_status_VOLUME_STATUS_MASK as u8) != 0
+        self.0 & (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u8) != 0
+    }
+
+    #[allow(clippy::assertions_on_constants)]
+    pub fn is_muted_or_min_volume(self) -> bool {
+        // function's implementation assumes that min volume is zero (as it is)
+        assert!(libcec_sys::cec_audio_status_VOLUME_MIN == 0); 
+        (self.0 & (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u8) != 0) || (self.0 == 0)
     }
 }
 
@@ -193,33 +200,60 @@ mod audiostatus_tests {
     use super::*;
 
     #[test]
-    pub fn test_min_volume() {
+    pub fn test_zero_volume_with_mute_bit() {
         let raw = libcec_sys::cec_audio_status_VOLUME_MIN as u8;
-        let status = KnownCecAudioStatus::try_from(raw).unwrap();
+        let status = KnownCecAudioStatus::try_from(raw | (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u8)).unwrap();
         assert_eq!(status.volume(), 0u8);
-        assert_eq!(status.is_muted(), false);
+        assert!(status.is_muted());
+        assert!(status.is_muted_or_min_volume());
 
         let status = KnownCecAudioStatus::new(0u8, false);
         assert_eq!(u8::from(status), raw);
     }
 
     #[test]
-    pub fn test_max_volume() {
+    pub fn test_zero_volume_without_mute_bit() {
+        let raw = libcec_sys::cec_audio_status_VOLUME_MIN as u8;
+        let status = KnownCecAudioStatus::try_from(raw /* no mute bit! */).unwrap();
+        assert_eq!(status.volume(), 0u8);
+        assert!(!status.is_muted());  // is not muted since the mute bit was not set! But volume is minimum
+        assert!(status.is_muted_or_min_volume());
+
+        let status = KnownCecAudioStatus::new(0u8, false);
+        assert_eq!(u8::from(status), raw);
+    }
+
+    #[test]
+    pub fn test_max_volume_with_mute_bit() {
         let raw = libcec_sys::cec_audio_status_VOLUME_MAX as u8;
-        let status = KnownCecAudioStatus::try_from(raw).unwrap();
+        let status = KnownCecAudioStatus::try_from(raw | (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u8)).unwrap();
         assert_eq!(status.volume(), 100u8);
-        assert_eq!(status.is_muted(), false);
+        assert!(status.is_muted()); // is muted since the mute bit was set!
+        assert!(status.is_muted_or_min_volume());
 
         let status = KnownCecAudioStatus::new(100u8, false);
         assert_eq!(u8::from(status), raw);
     }
 
     #[test]
-    pub fn test_muted_volume() {
+    pub fn test_max_volume_without_mute_bit() {
+        let raw = libcec_sys::cec_audio_status_VOLUME_MAX as u8;
+        let status = KnownCecAudioStatus::try_from(raw /* no mute bit! */).unwrap();
+        assert_eq!(status.volume(), 100u8);
+        assert!(!status.is_muted());// is not muted since the mute bit was not set! But volume > 0
+        assert!(!status.is_muted_or_min_volume());
+
+        let status = KnownCecAudioStatus::new(100u8, false);
+        assert_eq!(u8::from(status), raw);
+    }
+
+    #[test]
+    pub fn test_muted_nonmax_volume() {
         let raw = 75u8 | (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u8);
         let status = KnownCecAudioStatus::try_from(raw).unwrap();
         assert_eq!(status.volume(), 75u8);
-        assert_eq!(status.is_muted(), true);
+        assert!(status.is_muted());
+        assert!(status.is_muted_or_min_volume());
 
         let status = KnownCecAudioStatus::new(75u8, true);
         assert_eq!(u8::from(status), raw);
@@ -341,7 +375,7 @@ mod datapacket_tests {
     /// 1) sizes match
     /// 2) and that the elements of CecDatapacket match the first elements of packet2
     fn assert_eq_packet(packet: CecDatapacket, packet2: cec_datapacket) {
-        assert_eq!(packet.0.len(), packet2.size.try_into().unwrap());
+        assert_eq!(packet.0.len(), packet2.size.into());
         assert!(packet
             .0
             .as_slice()
@@ -364,7 +398,7 @@ mod datapacket_tests {
             data: data_buffer,
             size: 64,
         };
-        let packet: CecDatapacket = ffi_packet.try_into().unwrap();
+        let packet: CecDatapacket = ffi_packet.into();
         assert_eq_packet(packet, ffi_packet);
     }
 
@@ -378,7 +412,7 @@ mod datapacket_tests {
             data: data_buffer,
             size: 3,
         };
-        let packet: CecDatapacket = ffi_packet.try_into().unwrap();
+        let packet: CecDatapacket = ffi_packet.into();
         assert_eq!(packet.0.as_slice(), &[5, 7, 50]);
     }
 
@@ -388,7 +422,7 @@ mod datapacket_tests {
         a.push(2);
         a.push(50);
         let packet = CecDatapacket(a);
-        let ffi_packet: cec_datapacket = packet.try_into().unwrap();
+        let ffi_packet: cec_datapacket = packet.into();
         let mut expected = cec_datapacket {
             size: 2,
             data: [0; 64],
@@ -403,7 +437,7 @@ mod datapacket_tests {
         let mut a = ArrayVec::from([99; 64]);
         a.as_mut_slice()[1] = 50;
         let packet = CecDatapacket(a);
-        let ffi_packet: cec_datapacket = packet.try_into().unwrap();
+        let ffi_packet: cec_datapacket = packet.into();
         let mut expected = cec_datapacket {
             size: 64,
             data: [99; 64],
