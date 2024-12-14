@@ -580,7 +580,7 @@ pub enum CecBusDeviceStatus {
     NotPresent = libcec_sys::cec_bus_device_status_NOT_PRESENT,
     HandledByLibcec = libcec_sys::cec_bus_device_status_HANDLED_BY_LIBCEC,
 }
-#[repr(u32)]
+#[EnumRepr(type = "cec_vendor_id")]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum CecVendorId {
     Toshiba = libcec_sys::cec_vendor_id_TOSHIBA,
