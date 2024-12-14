@@ -49,8 +49,14 @@ pub enum CecAudioStatus {
     VolumeMax = libcec_sys::cec_audio_status_VOLUME_MAX,
 }
 
+// 
+// Due to EnumRepr, cannot use #[cfg(abi6)] inside the enum
+// Hence, repeating the enum with two cfg's
+//
+
 #[EnumRepr(type = "cec_version")]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[cfg(abi6)]
 pub enum CecVersion {
     VersionUnknown = libcec_sys::cec_version_UNKNOWN,
     Version12 = libcec_sys::cec_version__1_2,
@@ -58,8 +64,19 @@ pub enum CecVersion {
     Version13 = libcec_sys::cec_version__1_3,
     Version13a = libcec_sys::cec_version__1_3A,
     Version14 = libcec_sys::cec_version__1_4,
-    #[cfg(abi6)]
     Version20 = libcec_sys::cec_version__2_0,
+}
+
+#[EnumRepr(type = "cec_version")]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[cfg(not(abi6))]
+pub enum CecVersion {
+    VersionUnknown = libcec_sys::cec_version_UNKNOWN,
+    Version12 = libcec_sys::cec_version__1_2,
+    Version12a = libcec_sys::cec_version__1_2A,
+    Version13 = libcec_sys::cec_version__1_3,
+    Version13a = libcec_sys::cec_version__1_3A,
+    Version14 = libcec_sys::cec_version__1_4,
 }
 
 #[allow(clippy::enum_clike_unportable_variant)]
