@@ -64,11 +64,11 @@ jobs:
                   profile: minimal
                   target: ${{ matrix.job.target }}
                   override: true
-            - uses: Swatinem/rust-cache@v2
-              with:
-                  # use additional cache key, 
-                  # ensure cache separation
-                  key: ${{ matrix.job.target }}-${{ matrix.job.libcec }}-${{ matrix.job.pkg-config }}
+            #- uses: Swatinem/rust-cache@v2
+            #  with:
+            #      # use additional cache key, 
+            #      # ensure cache separation
+            #      key: ${{ matrix.job.target }}-${{ matrix.job.libcec }}-${{ matrix.job.pkg-config }}
             # libcec and p8-platform from apt repo
             - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && runner.os == 'Linux' }}
               name: Install libcec(-dev) and build dependencies
