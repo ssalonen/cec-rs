@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - fixed KnownCecAudioStatus::is_muted to simply check mute bit status
 - added KnownCecAudioStatus::is_muted_or_min_volume for convenience
+- switched to EnumRepr for correct types on windows
 
 ## 9.0.0
 

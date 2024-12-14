@@ -497,12 +497,12 @@ impl core::convert::TryFrom<cec_command> for CecCommand {
     type Error = TryFromCecCommandError;
 
     fn try_from(command: cec_command) -> std::result::Result<Self, Self::Error> {
-        let opcode = CecOpcode::from_repr(command.opcode)
-            .ok_or(TryFromCecCommandError::UnknownOpcode)?;
+        let opcode =
+            CecOpcode::from_repr(command.opcode).ok_or(TryFromCecCommandError::UnknownOpcode)?;
         let initiator = CecLogicalAddress::from_repr(command.initiator)
             .ok_or(TryFromCecCommandError::UnknownInitiator)?;
         let destination = CecLogicalAddress::from_repr(command.destination)
-            .ok_or( TryFromCecCommandError::UnknownDestination)?;
+            .ok_or(TryFromCecCommandError::UnknownDestination)?;
         let parameters = command.parameters.into();
         let transmit_timeout = Duration::from_millis(if command.transmit_timeout < 0 {
             0
@@ -731,7 +731,7 @@ impl TryFrom<cec_logical_addresses> for CecLogicalAddresses {
     type Error = TryFromCecLogicalAddressesError;
     fn try_from(addresses: cec_logical_addresses) -> Result<Self, Self::Error> {
         let primary = CecLogicalAddress::from_repr(addresses.primary)
-            .ok_or( TryFromCecLogicalAddressesError::InvalidPrimaryAddress)?;
+            .ok_or(TryFromCecLogicalAddressesError::InvalidPrimaryAddress)?;
         let primary = KnownCecLogicalAddress::new(primary)
             .ok_or(TryFromCecLogicalAddressesError::UnknownPrimaryAddress)?;
 
@@ -740,9 +740,9 @@ impl TryFrom<cec_logical_addresses> for CecLogicalAddresses {
                 let logical_addr = logical_addr as i32;
                 // If logical address x is in use, addresses.addresses[x] != 0.
                 if addr_mask != 0 {
-                    KnownAndRegisteredCecLogicalAddress::new(
-                        CecLogicalAddress::from_repr(logical_addr)?,
-                    )
+                    KnownAndRegisteredCecLogicalAddress::new(CecLogicalAddress::from_repr(
+                        logical_addr,
+                    )?)
                 } else {
                     None
                 }
@@ -951,7 +951,7 @@ impl core::convert::TryFrom<cec_keypress> for CecKeypress {
     type Error = TryFromCecKeyPressError;
     fn try_from(keypress: cec_keypress) -> std::result::Result<Self, Self::Error> {
         let keycode = CecUserControlCode::from_repr(keypress.keycode)
-            .ok_or( TryFromCecKeyPressError::UnknownKeycode)?;
+            .ok_or(TryFromCecKeyPressError::UnknownKeycode)?;
         Ok(CecKeypress {
             keycode,
             duration: Duration::from_millis(keypress.duration.into()),
