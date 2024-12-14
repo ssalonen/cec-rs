@@ -2,20 +2,10 @@ extern crate enum_repr_derive;
 #[macro_use]
 extern crate derive_builder;
 
-#[cfg(abi4)]
-mod enums4;
-#[cfg(abi4)]
-pub use enums4::*;
-#[cfg(abi5)]
-mod enums5;
-#[cfg(abi5)]
-pub use crate::enums5::*;
 
-#[cfg(abi6)]
-mod enums6;
+mod enums;
+pub use crate::enums::*;
 
-#[cfg(abi6)]
-pub use crate::enums6::*;
 #[cfg(all(not(abi4), not(abi5), not(abi6)))]
 compile_error!("BUG: libcec abi not detected");
 
@@ -35,7 +25,7 @@ use libcec_sys::{
     libcec_set_active_source, libcec_set_deck_control_mode, libcec_set_deck_info,
     libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices,
     libcec_switch_monitoring, libcec_transmit, libcec_volume_down, libcec_volume_up, ICECCallbacks,
-    LIBCEC_OSD_NAME_SIZE, LIBCEC_VERSION_CURRENT,
+    LIBCEC_OSD_NAME_SIZE, 
 };
 
 use num_traits::ToPrimitive;
@@ -53,8 +43,8 @@ use std::fmt;
 #[cfg(test)]
 mod tests {
 
-    use libcec_sys::CEC_LIB_VERSION_MAJOR;
     use std::env;
+    use libcec_sys::CEC_LIB_VERSION_MAJOR;
 
     #[test]
     fn test_abi_ci() {
@@ -144,20 +134,20 @@ pub struct KnownCecAudioStatus(u8);
 
 impl KnownCecAudioStatus {
     pub fn new(volume: u8, is_muted: bool) -> Self {
-        let volume = min(volume, libcec_sys::CEC_AUDIO_VOLUME_MAX as u8);
+        let volume = min(volume, libcec_sys::cec_audio_status_VOLUME_MAX as u8);
         Self(if is_muted {
-            volume | (libcec_sys::CEC_AUDIO_MUTE_STATUS_MASK as u8)
+            volume | (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u8)
         } else {
             volume
         })
     }
 
     pub fn volume(self) -> u8 {
-        self.0 & (libcec_sys::CEC_AUDIO_VOLUME_STATUS_MASK as u8)
+        self.0 & (libcec_sys::cec_audio_status_VOLUME_STATUS_MASK as u8)
     }
 
     pub fn is_muted(self) -> bool {
-        self.0 & (libcec_sys::CEC_AUDIO_MUTE_STATUS_MASK as u8) != 0
+        self.0 & (libcec_sys::cec_audio_status_VOLUME_STATUS_MASK as u8) != 0
     }
 }
 
@@ -171,13 +161,13 @@ impl TryFrom<u8> for KnownCecAudioStatus {
     type Error = TryFromCecAudioStatusError;
 
     fn try_from(status: u8) -> Result<Self, Self::Error> {
-        let volume = status & (libcec_sys::CEC_AUDIO_VOLUME_STATUS_MASK as u8);
-        if volume > libcec_sys::CEC_AUDIO_VOLUME_MAX as u8 {
-            if volume == libcec_sys::CEC_AUDIO_VOLUME_STATUS_UNKNOWN as u8 {
+        let volume = status & (libcec_sys::cec_audio_status_VOLUME_STATUS_MASK as u8);
+        if volume > libcec_sys::cec_audio_status_VOLUME_MAX as u8 {
+            if volume == libcec_sys::cec_audio_status_VOLUME_STATUS_UNKNOWN as u8 {
                 Err(Self::Error::Unknown)
             } else {
                 Err(Self::Error::Reserved(
-                    volume - (libcec_sys::CEC_AUDIO_VOLUME_MAX as u8) - 1,
+                    volume - (libcec_sys::cec_audio_status_VOLUME_MAX as u8) - 1,
                 ))
             }
         } else {
@@ -204,7 +194,7 @@ mod audiostatus_tests {
 
     #[test]
     pub fn test_min_volume() {
-        let raw = libcec_sys::CEC_AUDIO_VOLUME_MIN as u8;
+        let raw = libcec_sys::cec_audio_status_VOLUME_MIN as u8;
         let status = KnownCecAudioStatus::try_from(raw).unwrap();
         assert_eq!(status.volume(), 0u8);
         assert_eq!(status.is_muted(), false);
@@ -215,7 +205,7 @@ mod audiostatus_tests {
 
     #[test]
     pub fn test_max_volume() {
-        let raw = libcec_sys::CEC_AUDIO_VOLUME_MAX as u8;
+        let raw = libcec_sys::cec_audio_status_VOLUME_MAX as u8;
         let status = KnownCecAudioStatus::try_from(raw).unwrap();
         assert_eq!(status.volume(), 100u8);
         assert_eq!(status.is_muted(), false);
@@ -226,7 +216,7 @@ mod audiostatus_tests {
 
     #[test]
     pub fn test_muted_volume() {
-        let raw = 75u8 | (libcec_sys::CEC_AUDIO_MUTE_STATUS_MASK as u8);
+        let raw = 75u8 | (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u8);
         let status = KnownCecAudioStatus::try_from(raw).unwrap();
         assert_eq!(status.volume(), 75u8);
         assert_eq!(status.is_muted(), true);
@@ -237,7 +227,7 @@ mod audiostatus_tests {
 
     #[test]
     pub fn test_reserved_volume() {
-        let raw = libcec_sys::CEC_AUDIO_VOLUME_MAX as u8 + 3;
+        let raw = libcec_sys::cec_audio_status_VOLUME_MAX as u8 + 3;
         let status = KnownCecAudioStatus::try_from(raw);
         assert_eq!(status, Err(TryFromCecAudioStatusError::Reserved(2)));
 
@@ -247,7 +237,7 @@ mod audiostatus_tests {
 
     #[test]
     pub fn test_unknown_volume() {
-        let raw = libcec_sys::CEC_AUDIO_VOLUME_STATUS_UNKNOWN as u8;
+        let raw = libcec_sys::cec_audio_status_VOLUME_STATUS_UNKNOWN as u8;
         let status = KnownCecAudioStatus::try_from(raw);
         assert_eq!(status, Err(TryFromCecAudioStatusError::Unknown));
 
@@ -935,12 +925,12 @@ impl core::convert::TryFrom<cec_keypress> for CecKeypress {
 mod keypress_tests {
     use super::*;
 
-    use libcec_sys::CEC_USER_CONTROL_CODE_UP;
+    use libcec_sys::cec_user_control_code_UP;
 
     #[test]
     fn test_keypress_from_ffi_known_code() {
         let keypress: CecKeypress = cec_keypress {
-            keycode: CEC_USER_CONTROL_CODE_UP,
+            keycode: cec_user_control_code_UP,
             duration: 300,
         }
         .try_into()
@@ -1517,7 +1507,7 @@ impl From<&CecConnectionCfg> for libcec_configuration {
             cfg = mem::zeroed::<libcec_configuration>();
             libcec_clear_configuration(&mut cfg);
         }
-        cfg.clientVersion = LIBCEC_VERSION_CURRENT;
+        cfg.clientVersion = LibcecVersion::Current as u32;
         cfg.strDeviceName = first_n::<{ LIBCEC_OSD_NAME_SIZE as usize }>(&config.device_name);
         cfg.deviceTypes = config.device_types.clone().into();
         if let Some(v) = config.physical_address {
