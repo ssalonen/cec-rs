@@ -49,7 +49,7 @@ pub enum CecAudioStatus {
     VolumeMax = libcec_sys::cec_audio_status_VOLUME_MAX,
 }
 
-// 
+//
 // Due to EnumRepr, cannot use #[cfg(abi6)] inside the enum
 // Hence, repeating the enum with two cfg's
 //
