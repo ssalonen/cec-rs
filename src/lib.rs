@@ -1,4 +1,3 @@
-extern crate enum_repr_derive;
 #[macro_use]
 extern crate derive_builder;
 
@@ -306,7 +305,7 @@ impl From<KnownCecLogicalAddress> for CecLogicalAddress {
 
 impl From<KnownCecLogicalAddress> for cec_logical_address {
     fn from(address: KnownCecLogicalAddress) -> Self {
-        address.0.into()
+        address.0.repr()
     }
 }
 
@@ -331,7 +330,7 @@ impl From<KnownAndRegisteredCecLogicalAddress> for CecLogicalAddress {
 
 impl From<KnownAndRegisteredCecLogicalAddress> for cec_logical_address {
     fn from(address: KnownAndRegisteredCecLogicalAddress) -> Self {
-        address.0.into()
+        address.0.repr()
     }
 }
 
@@ -475,11 +474,11 @@ pub struct CecCommand {
 impl From<CecCommand> for cec_command {
     fn from(command: CecCommand) -> cec_command {
         cec_command {
-            initiator: command.initiator.into(),
-            destination: command.destination.into(),
+            initiator: command.initiator.repr(),
+            destination: command.destination.repr(),
             ack: command.ack.into(),
             eom: command.eom.into(),
-            opcode: command.opcode.into(),
+            opcode: command.opcode.repr(),
             parameters: command.parameters.into(),
             opcode_set: command.opcode_set.into(),
             transmit_timeout: command.transmit_timeout.as_millis() as i32,
@@ -498,12 +497,12 @@ impl core::convert::TryFrom<cec_command> for CecCommand {
     type Error = TryFromCecCommandError;
 
     fn try_from(command: cec_command) -> std::result::Result<Self, Self::Error> {
-        let opcode = CecOpcode::try_from(command.opcode)
-            .map_err(|_| TryFromCecCommandError::UnknownOpcode)?;
-        let initiator = CecLogicalAddress::try_from(command.initiator)
-            .map_err(|_| TryFromCecCommandError::UnknownInitiator)?;
-        let destination = CecLogicalAddress::try_from(command.destination)
-            .map_err(|_| TryFromCecCommandError::UnknownDestination)?;
+        let opcode = CecOpcode::from_repr(command.opcode)
+            .ok_or(TryFromCecCommandError::UnknownOpcode)?;
+        let initiator = CecLogicalAddress::from_repr(command.initiator)
+            .ok_or(TryFromCecCommandError::UnknownInitiator)?;
+        let destination = CecLogicalAddress::from_repr(command.destination)
+            .ok_or( TryFromCecCommandError::UnknownDestination)?;
         let parameters = command.parameters.into();
         let transmit_timeout = Duration::from_millis(if command.transmit_timeout < 0 {
             0
@@ -574,10 +573,10 @@ mod command_tests {
             ffi_command,
             cec_command {
                 ack: 0,
-                destination: CecLogicalAddress::Playbackdevice2.into(),
+                destination: CecLogicalAddress::Playbackdevice2.repr(),
                 eom: 1,
-                initiator: CecLogicalAddress::Playbackdevice1.into(),
-                opcode: CecOpcode::ClearAnalogueTimer.into(),
+                initiator: CecLogicalAddress::Playbackdevice1.repr(),
+                opcode: CecOpcode::ClearAnalogueTimer.repr(),
                 opcode_set: 1,
                 parameters: CecDatapacket(parameters).into(), // OK to use here, verified in CecDatapacket unit tests
                 transmit_timeout: 65_000,
@@ -592,10 +591,10 @@ mod command_tests {
         parameters.push(3);
         let ffi_command = cec_command {
             ack: 0,
-            destination: CecLogicalAddress::Playbackdevice2.into(),
+            destination: CecLogicalAddress::Playbackdevice2.repr(),
             eom: 1,
-            initiator: CecLogicalAddress::Playbackdevice1.into(),
-            opcode: CecOpcode::ClearAnalogueTimer.into(),
+            initiator: CecLogicalAddress::Playbackdevice1.repr(),
+            opcode: CecOpcode::ClearAnalogueTimer.repr(),
             opcode_set: 1,
             parameters: CecDatapacket(parameters.clone()).into(), // OK to use here, verified in CecDatapacket unit tests
             transmit_timeout: 65_000,
@@ -644,8 +643,8 @@ impl core::convert::TryFrom<cec_log_message> for CecLogMessage {
             .to_str()
             .map_err(|_| TryFromCecLogMessageError::MessageParseError)?
             .to_owned();
-        let level = CecLogLevel::try_from(log_message.level)
-            .map_err(|_| TryFromCecLogMessageError::LogLevelParseError)?;
+        let level = CecLogLevel::from_repr(log_message.level)
+            .ok_or(TryFromCecLogMessageError::LogLevelParseError)?;
         let time = log_message
             .time
             .try_into()
@@ -731,8 +730,8 @@ pub enum TryFromCecLogicalAddressesError {
 impl TryFrom<cec_logical_addresses> for CecLogicalAddresses {
     type Error = TryFromCecLogicalAddressesError;
     fn try_from(addresses: cec_logical_addresses) -> Result<Self, Self::Error> {
-        let primary = CecLogicalAddress::try_from(addresses.primary)
-            .map_err(|_| TryFromCecLogicalAddressesError::InvalidPrimaryAddress)?;
+        let primary = CecLogicalAddress::from_repr(addresses.primary)
+            .ok_or( TryFromCecLogicalAddressesError::InvalidPrimaryAddress)?;
         let primary = KnownCecLogicalAddress::new(primary)
             .ok_or(TryFromCecLogicalAddressesError::UnknownPrimaryAddress)?;
 
@@ -742,7 +741,7 @@ impl TryFrom<cec_logical_addresses> for CecLogicalAddresses {
                 // If logical address x is in use, addresses.addresses[x] != 0.
                 if addr_mask != 0 {
                     KnownAndRegisteredCecLogicalAddress::new(
-                        CecLogicalAddress::try_from(logical_addr).ok()?,
+                        CecLogicalAddress::from_repr(logical_addr)?,
                     )
                 } else {
                     None
@@ -764,7 +763,7 @@ impl From<CecLogicalAddresses> for cec_logical_addresses {
         };
         for known_address in addresses.addresses {
             let address: CecLogicalAddress = known_address.into();
-            let address_mask_position: i32 = address.into();
+            let address_mask_position: i32 = address.repr();
             data.addresses[address_mask_position as usize] = 1;
         }
         data
@@ -823,7 +822,7 @@ mod logical_addresses_tests {
         let ffi_addresses: cec_logical_addresses = CecLogicalAddresses::default().into();
         assert_eq!(
             ffi_addresses.primary,
-            CecLogicalAddress::Unregistered.into()
+            CecLogicalAddress::Unregistered.repr()
         );
         assert_eq!(ffi_addresses.addresses, [0; 16]);
 
@@ -844,7 +843,7 @@ mod logical_addresses_tests {
         .into();
         assert_eq!(
             ffi_addresses.primary,
-            CecLogicalAddress::Playbackdevice1.into()
+            CecLogicalAddress::Playbackdevice1.repr()
         );
         // addresses mask should be all zeros
         assert_eq!(ffi_addresses.addresses, [0; 16]);
@@ -878,7 +877,7 @@ mod logical_addresses_tests {
 
         assert_eq!(
             ffi_addresses.primary,
-            CecLogicalAddress::Playbackdevice1.into()
+            CecLogicalAddress::Playbackdevice1.repr()
         );
         let ffi_secondary = ffi_addresses.addresses;
         const PRIMARY_INDEX: usize = CecLogicalAddress::Playbackdevice1 as usize;
@@ -951,8 +950,8 @@ pub enum TryFromCecKeyPressError {
 impl core::convert::TryFrom<cec_keypress> for CecKeypress {
     type Error = TryFromCecKeyPressError;
     fn try_from(keypress: cec_keypress) -> std::result::Result<Self, Self::Error> {
-        let keycode = CecUserControlCode::try_from(keypress.keycode)
-            .map_err(|_| TryFromCecKeyPressError::UnknownKeycode)?;
+        let keycode = CecUserControlCode::from_repr(keypress.keycode)
+            .ok_or( TryFromCecKeyPressError::UnknownKeycode)?;
         Ok(CecKeypress {
             keycode,
             duration: Duration::from_millis(keypress.duration.into()),
@@ -1003,10 +1002,10 @@ impl CecDeviceTypeVec {
 impl From<CecDeviceTypeVec> for cec_device_type_list {
     fn from(device_types: CecDeviceTypeVec) -> cec_device_type_list {
         let mut devices = cec_device_type_list {
-            types: [CecDeviceType::Reserved.into(); 5],
+            types: [CecDeviceType::Reserved.repr(); 5],
         };
         for (i, type_id) in device_types.0.iter().enumerate() {
-            devices.types[i] = (*type_id).into();
+            devices.types[i] = (*type_id).repr();
         }
         devices
     }
@@ -1020,7 +1019,7 @@ mod cec_device_type_vec_tests {
     fn test_to_ffi_empty() {
         let devices = ArrayVec::new();
         let ffi_devices: cec_device_type_list = CecDeviceTypeVec(devices).into();
-        assert_eq!(ffi_devices.types, [CecDeviceType::Reserved.into(); 5]);
+        assert_eq!(ffi_devices.types, [CecDeviceType::Reserved.repr(); 5]);
     }
 
     #[test]
@@ -1029,9 +1028,9 @@ mod cec_device_type_vec_tests {
         devices.push(CecDeviceType::PlaybackDevice);
         devices.push(CecDeviceType::RecordingDevice);
         let ffi_devices: cec_device_type_list = CecDeviceTypeVec(devices).into();
-        assert_eq!(ffi_devices.types[0], CecDeviceType::PlaybackDevice.into());
-        assert_eq!(ffi_devices.types[1], CecDeviceType::RecordingDevice.into());
-        assert_eq!(ffi_devices.types[2..], [CecDeviceType::Reserved.into(); 3]);
+        assert_eq!(ffi_devices.types[0], CecDeviceType::PlaybackDevice.repr());
+        assert_eq!(ffi_devices.types[1], CecDeviceType::RecordingDevice.repr());
+        assert_eq!(ffi_devices.types[2..], [CecDeviceType::Reserved.repr(); 3]);
     }
 }
 
@@ -1239,14 +1238,14 @@ impl CecConnection {
         }
     }
     pub fn send_power_on_devices(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
-        if unsafe { libcec_power_on_devices(self.1, address.into()) } == 0 {
+        if unsafe { libcec_power_on_devices(self.1, address.repr()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
         }
     }
     pub fn send_standby_devices(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
-        if unsafe { libcec_standby_devices(self.1, address.into()) } == 0 {
+        if unsafe { libcec_standby_devices(self.1, address.repr()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -1254,7 +1253,7 @@ impl CecConnection {
     }
 
     pub fn set_active_source(&self, device_type: CecDeviceType) -> CecConnectionResult<()> {
-        if unsafe { libcec_set_active_source(self.1, device_type.into()) } == 0 {
+        if unsafe { libcec_set_active_source(self.1, device_type.repr()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -1263,9 +1262,9 @@ impl CecConnection {
 
     pub fn get_active_source(&self) -> CecLogicalAddress {
         let active_raw: cec_logical_address = unsafe { libcec_get_active_source(self.1) };
-        match CecLogicalAddress::try_from(active_raw) {
-            Ok(address) => address,
-            Err(active_raw) => {
+        match CecLogicalAddress::from_repr(active_raw) {
+            Some(address) => address,
+            None => {
                 warn!("get_active_source: Could not convert logical address {} to rust enum. Returning Unknown", active_raw);
                 CecLogicalAddress::Unknown
             }
@@ -1273,15 +1272,15 @@ impl CecConnection {
     }
 
     pub fn is_active_source(&self, address: CecLogicalAddress) -> bool {
-        (unsafe { libcec_is_active_source(self.1, address.into()) }) != 0
+        (unsafe { libcec_is_active_source(self.1, address.repr()) }) != 0
     }
 
     pub fn get_device_power_status(&self, address: CecLogicalAddress) -> CecPowerStatus {
         let status_raw: cec_power_status =
-            unsafe { libcec_get_device_power_status(self.1, address.into()) };
-        match CecPowerStatus::try_from(status_raw) {
-            Ok(status) => status,
-            Err(status_raw) => {
+            unsafe { libcec_get_device_power_status(self.1, address.repr()) };
+        match CecPowerStatus::from_repr(status_raw) {
+            Some(status) => status,
+            None => {
                 warn!("get_device_power_status: Could not convert result {} to rust enum. Returning Unknown", status_raw);
                 CecPowerStatus::Unknown
             }
@@ -1294,7 +1293,7 @@ impl CecConnection {
         key: CecUserControlCode,
         wait: bool,
     ) -> CecConnectionResult<()> {
-        if unsafe { libcec_send_keypress(self.1, address.into(), key.into(), wait.into()) } == 0 {
+        if unsafe { libcec_send_keypress(self.1, address.repr(), key.repr(), wait.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -1306,7 +1305,7 @@ impl CecConnection {
         address: CecLogicalAddress,
         wait: bool,
     ) -> CecConnectionResult<()> {
-        if unsafe { libcec_send_key_release(self.1, address.into(), wait.into()) } == 0 {
+        if unsafe { libcec_send_key_release(self.1, address.repr(), wait.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -1368,7 +1367,7 @@ impl CecConnection {
     }
 
     pub fn set_logical_address(&self, address: CecLogicalAddress) -> CecConnectionResult<()> {
-        if unsafe { libcec_set_logical_address(self.1, address.into()) } == 0 {
+        if unsafe { libcec_set_logical_address(self.1, address.repr()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -1394,7 +1393,7 @@ impl CecConnection {
         mode: CecDeckControlMode,
         send_update: bool,
     ) -> CecConnectionResult<()> {
-        if unsafe { libcec_set_deck_control_mode(self.1, mode.into(), send_update.into()) } == 0 {
+        if unsafe { libcec_set_deck_control_mode(self.1, mode.repr(), send_update.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -1402,7 +1401,7 @@ impl CecConnection {
     }
 
     pub fn set_deck_info(&self, info: CecDeckInfo, send_update: bool) -> CecConnectionResult<()> {
-        if unsafe { libcec_set_deck_info(self.1, info.into(), send_update.into()) } == 0 {
+        if unsafe { libcec_set_deck_info(self.1, info.repr(), send_update.into()) } == 0 {
             Err(CecConnectionResultError::TransmitFailed)
         } else {
             Ok(())
@@ -1553,7 +1552,7 @@ impl From<&CecConnectionCfg> for libcec_configuration {
             cfg.iPhysicalAddress = v;
         }
         if let Some(v) = config.base_device {
-            cfg.baseDevice = v.into();
+            cfg.baseDevice = v.repr();
         }
         if let Some(v) = config.hdmi_port {
             cfg.iHDMIPort = v;
@@ -1583,10 +1582,10 @@ impl From<&CecConnectionCfg> for libcec_configuration {
             cfg.bMonitorOnly = v.into();
         }
         if let Some(v) = config.adapter_type {
-            cfg.adapterType = v.into();
+            cfg.adapterType = v.repr();
         }
         if let Some(v) = config.combo_key {
-            cfg.comboKey = v.into();
+            cfg.comboKey = v.repr();
         }
         if let Some(v) = config.combo_key_timeout {
             cfg.iComboKeyTimeoutMs = v.as_millis().to_u32().unwrap();
