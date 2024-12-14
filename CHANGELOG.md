@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 9.0.0
+
+- fixed release, libcec 6.0.0. Restored support for other architectures.
+
 ## 8.0.1
 
 - fixed release, libcec 5.0.1
