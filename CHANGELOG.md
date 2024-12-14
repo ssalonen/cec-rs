@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- fixed KnownCecAudioStatus::is_muted to simply check mute bit status
+- added KnownCecAudioStatus::is_muted_or_min_volume for convenience
+
 ## 9.0.0
 
 - fixed release, libcec 6.0.0. Restored support for other architectures.

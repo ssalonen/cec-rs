@@ -2,7 +2,6 @@ extern crate enum_repr_derive;
 #[macro_use]
 extern crate derive_builder;
 
-
 mod enums;
 pub use crate::enums::*;
 
@@ -25,7 +24,7 @@ use libcec_sys::{
     libcec_set_active_source, libcec_set_deck_control_mode, libcec_set_deck_info,
     libcec_set_inactive_view, libcec_set_logical_address, libcec_standby_devices,
     libcec_switch_monitoring, libcec_transmit, libcec_volume_down, libcec_volume_up, ICECCallbacks,
-    LIBCEC_OSD_NAME_SIZE, 
+    LIBCEC_OSD_NAME_SIZE,
 };
 
 use num_traits::ToPrimitive;
@@ -43,8 +42,8 @@ use std::fmt;
 #[cfg(test)]
 mod tests {
 
-    use std::env;
     use libcec_sys::CEC_LIB_VERSION_MAJOR;
+    use std::env;
 
     #[test]
     fn test_abi_ci() {
@@ -153,7 +152,7 @@ impl KnownCecAudioStatus {
     #[allow(clippy::assertions_on_constants)]
     pub fn is_muted_or_min_volume(self) -> bool {
         // function's implementation assumes that min volume is zero (as it is)
-        assert!(libcec_sys::cec_audio_status_VOLUME_MIN == 0); 
+        assert!(libcec_sys::cec_audio_status_VOLUME_MIN == 0);
         (self.0 & (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u8) != 0) || (self.0 == 0)
     }
 }
@@ -202,7 +201,10 @@ mod audiostatus_tests {
     #[test]
     pub fn test_zero_volume_with_mute_bit() {
         let raw = libcec_sys::cec_audio_status_VOLUME_MIN as u8;
-        let status = KnownCecAudioStatus::try_from(raw | (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u8)).unwrap();
+        let status = KnownCecAudioStatus::try_from(
+            raw | (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u8),
+        )
+        .unwrap();
         assert_eq!(status.volume(), 0u8);
         assert!(status.is_muted());
         assert!(status.is_muted_or_min_volume());
@@ -216,7 +218,7 @@ mod audiostatus_tests {
         let raw = libcec_sys::cec_audio_status_VOLUME_MIN as u8;
         let status = KnownCecAudioStatus::try_from(raw /* no mute bit! */).unwrap();
         assert_eq!(status.volume(), 0u8);
-        assert!(!status.is_muted());  // is not muted since the mute bit was not set! But volume is minimum
+        assert!(!status.is_muted()); // is not muted since the mute bit was not set! But volume is minimum
         assert!(status.is_muted_or_min_volume());
 
         let status = KnownCecAudioStatus::new(0u8, false);
@@ -226,7 +228,10 @@ mod audiostatus_tests {
     #[test]
     pub fn test_max_volume_with_mute_bit() {
         let raw = libcec_sys::cec_audio_status_VOLUME_MAX as u8;
-        let status = KnownCecAudioStatus::try_from(raw | (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u8)).unwrap();
+        let status = KnownCecAudioStatus::try_from(
+            raw | (libcec_sys::cec_audio_status_MUTE_STATUS_MASK as u8),
+        )
+        .unwrap();
         assert_eq!(status.volume(), 100u8);
         assert!(status.is_muted()); // is muted since the mute bit was set!
         assert!(status.is_muted_or_min_volume());
@@ -240,7 +245,7 @@ mod audiostatus_tests {
         let raw = libcec_sys::cec_audio_status_VOLUME_MAX as u8;
         let status = KnownCecAudioStatus::try_from(raw /* no mute bit! */).unwrap();
         assert_eq!(status.volume(), 100u8);
-        assert!(!status.is_muted());// is not muted since the mute bit was not set! But volume > 0
+        assert!(!status.is_muted()); // is not muted since the mute bit was not set! But volume > 0
         assert!(!status.is_muted_or_min_volume());
 
         let status = KnownCecAudioStatus::new(100u8, false);
