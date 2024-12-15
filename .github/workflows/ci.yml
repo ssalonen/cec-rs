@@ -20,7 +20,7 @@ jobs:
                       libcec: static-libcec
                       expected_libcec_abi: 6
                       additional_env:
-                          LIBCEC_VENDORED: "1"
+                          LIBCEC_STATIC: "1"
                     - os: ubuntu-latest
                       target: arm-unknown-linux-gnueabi
                       use-cross: true
