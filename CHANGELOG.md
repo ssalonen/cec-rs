@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 11.0.0
+
+- bump to libcec 7 with macOS support and other fixes
+
 ## 10.0.0
 
 - fixed KnownCecAudioStatus::is_muted to simply check mute bit status

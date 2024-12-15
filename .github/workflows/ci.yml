@@ -17,7 +17,7 @@ jobs:
                     - os: windows-latest
                       target: x86_64-pc-windows-msvc
                       use-cross: false
-                      libcec: vendored-libcec
+                      libcec: static-libcec
                       expected_libcec_abi: 6
                     - os: ubuntu-latest
                       target: arm-unknown-linux-gnueabi
@@ -29,6 +29,13 @@ jobs:
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 6
+                    - os: ubuntu-latest
+                      target: x86_64-unknown-linux-gnu
+                      use-cross: true
+                      libcec: static-libcec
+                      expected_libcec_abi: 6
+                      additional_env:
+                          LIBCEC_STATIC: "1"
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
                       use-cross: true
@@ -44,6 +51,7 @@ jobs:
                       libcec-dev: "libcec-dev=4*"
                       pkg-config: true
                       expected_libcec_abi: 4
+                    # static libcec
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
                       use-cross: false # Important that we do not run cross so package install shows up
@@ -51,6 +59,14 @@ jobs:
                       libcec-dev: "libcec-dev=6*"
                       pkg-config: true
                       expected_libcec_abi: 6
+                    - os: macos-latest
+                      target: aarch64-apple-darwin
+                      use-cross: false
+                      libcec: "static-libcec"
+                      pkg-config: false
+                      expected_libcec_abi: 6
+                      additional_env:
+                          LIBCEC_STATIC: "1"
         steps:
             - name: Checkout repository
               uses: actions/checkout@v2
@@ -70,7 +86,7 @@ jobs:
                   # ensure cache separation
                   key: ${{ matrix.job.target }}-${{ matrix.job.libcec }}-${{ matrix.job.pkg-config }}
             # libcec and p8-platform from apt repo
-            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && runner.os == 'Linux' }}
+            - if: ${{ startsWith(matrix.job.libcec, 'libcec') && runner.os == 'Linux' }}
               name: Install libcec(-dev) and build dependencies
               run: |
                   set -ex
@@ -93,26 +109,18 @@ jobs:
               name: Setup developer command prompt
               uses: ilammy/msvc-dev-cmd@v1
             # pkg-config install
-            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && matrix.job.pkg-config && runner.os == 'Linux' }}
+            - if: ${{ startsWith(matrix.job.libcec, 'libcec') && matrix.job.pkg-config && runner.os == 'Linux' }}
               name: Install pkg-config for utilizing libcec from apt build dependency
               run: sudo apt-get install -yq pkg-config
             # pkg-config remove
-            - if: ${{ !startsWith(matrix.job.libcec, 'vendored') && !matrix.job.pkg-config && runner.os == 'Linux' }}
+            - if: ${{ startsWith(matrix.job.libcec, 'libcec') && !matrix.job.pkg-config && runner.os == 'Linux' }}
               name: Remove pkg-config
               run: sudo apt-get remove -yq pkg-config
-            # install Python with debug binaries for Windows (needed for debug build of vendored libcec)
-            # Github Workflow runners do not package debug binaries by default
-            # NOTE: 
-            - if: runner.os == 'Windows'
-              name: Install python 3.11.4 with debug binaries
-              run: |
-                  $arch = '${{ runner.arch }}' -eq 'X86' ? "" : "-amd64"
-                  curl -o python-3.11.4$arch.exe https://www.python.org/ftp/python/3.11.4/python-3.11.4$arch.exe
-                  Start-Process -FilePath "python-3.11.4$arch.exe" -ArgumentList "/quiet Include_debug=1 PrependPath=1 InstallAllUsers=0" -Verb runas -Wait
             - name: Cargo test
               uses: actions-rs/cargo@v1
               env:
                   EXPECTED_LIBCEC_VERSION_MAJOR: ${{ matrix.job.expected_libcec_abi }}
+                  LIBCEC_STATIC: ${{ matrix.job.additional_env.LIBCEC_STATIC }}
               with:
                   command: test
                   use-cross: ${{ matrix.job.use-cross }}
