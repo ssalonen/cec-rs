@@ -1,3 +1,18 @@
+[build.env]
+passthrough = [
+    "SCCACHE_ERROR_LOG",
+    "SCCACHE_LOG",
+    "SCCACHE_AZURE_CONNECTION_STRING",
+    "SCCACHE_AZURE_BLOB_CONTAINER",
+    "SCCACHE_DIR",
+    "MAJOR_VERSION",
+    "SRC_PATH",
+    "DEST_PATH",
+    "RUST_BACKTRACE",
+    "LIBCEC_VENDORED",
+    "LIBCEC_NO_VENDOR",
+    "LIBCEC_STATIC",
+]
 
 [target.aarch64-unknown-linux-gnu]
 image="ssalonen/aarch64-unknown-linux-gnu-0.2.1"
