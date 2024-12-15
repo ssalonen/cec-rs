@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 11.0.2
+
+- bumping libcec patch version
+
 ## 11.0.1
 
 - bump libcec with static builds (add link hint to udev)

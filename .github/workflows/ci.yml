@@ -19,16 +19,22 @@ jobs:
                       use-cross: false
                       libcec: static-libcec
                       expected_libcec_abi: 6
+                      additional_env:
+                          LIBCEC_VENDORED: "1"
                     - os: ubuntu-latest
                       target: arm-unknown-linux-gnueabi
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 6
+                      additional_env:
+                          LIBCEC_VENDORED: "1"
                     - os: ubuntu-latest
                       target: armv7-unknown-linux-gnueabihf
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 6
+                      additional_env:
+                          LIBCEC_VENDORED: "1"
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
                       use-cross: true
@@ -41,6 +47,8 @@ jobs:
                       use-cross: true
                       libcec: vendored-libcec
                       expected_libcec_abi: 6
+                      additional_env:
+                          LIBCEC_VENDORED: "1"
                     #
                     # libcec discovery with pkg config
                     #
@@ -101,9 +109,13 @@ jobs:
                   apt show '${{ matrix.job.libcec-dev }}'
                   sudo apt install -yq '${{ matrix.job.libcec-dev }}'
             # additional build dependencies for non-cross builds with vendored libcec sources
-            - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross && runner.os == 'Linux' }}
+            # Also needed by static in linking
+            - if: ${{ (startsWith(matrix.job.libcec, 'vendored') || startsWith(matrix.job.libcec, 'static')) && !matrix.job.use-cross && runner.os == 'Linux' }}
               name: Install libudev-dev for non-cross vendored builds as libcec build dependency
-              run: sudo apt-get install -yq libudev-dev
+              run:  |
+                  set -ex
+                  sudo apt-get update -yq
+                  sudo apt-get install -yq libudev-dev
             # setup developer command prompt for Windows
             - if: ${{ startsWith(matrix.job.libcec, 'vendored') && !matrix.job.use-cross && runner.os == 'Windows' }}
               name: Setup developer command prompt
@@ -121,6 +133,7 @@ jobs:
               env:
                   EXPECTED_LIBCEC_VERSION_MAJOR: ${{ matrix.job.expected_libcec_abi }}
                   LIBCEC_STATIC: ${{ matrix.job.additional_env.LIBCEC_STATIC }}
+                  LIBCEC_VENDORED: ${{ matrix.job.additional_env.LIBCEC_VENDORED }}
               with:
                   command: test
                   use-cross: ${{ matrix.job.use-cross }}
