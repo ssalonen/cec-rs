@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 11.0.1
+
+- bump libcec with static builds (add link hint to udev)
+
 ## 11.0.0
 
 - bump to libcec 7 with macOS support and other fixes

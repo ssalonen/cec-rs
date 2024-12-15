@@ -24,7 +24,7 @@ num-traits = '0.2.14'
 enum-repr = '0.2'
 
 [dependencies.libcec-sys]
-version = '7.0.0'
+version = '7.0.1'
 
 [badges.maintenance]
 status = 'passively-maintained'
