@@ -1,3 +1,9 @@
+[build]
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get --assume-yes install libudev-dev:$CROSS_DEB_ARCH"
+]
+
 [build.env]
 passthrough = [
     "SCCACHE_ERROR_LOG",
@@ -15,38 +21,38 @@ passthrough = [
 ]
 
 [target.aarch64-unknown-linux-gnu]
-image="ssalonen/aarch64-unknown-linux-gnu-0.2.1"
+image="ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main"
 
 [target.arm-unknown-linux-gnueabi]
-image="ssalonen/arm-unknown-linux-gnueabi-0.2.1"
+image="ghcr.io/cross-rs/arm-unknown-linux-gnueabi:main"
 
 [target.armv7-unknown-linux-gnueabihf]
-image="ssalonen/armv7-unknown-linux-gnueabihf-0.2.1"
+image="ghcr.io/cross-rs/armv7-unknown-linux-gnueabihf:main"
 
 [target.i686-unknown-linux-gnu]
-image="ssalonen/i686-unknown-linux-gnu-0.2.1"
+image="ghcr.io/cross-rs/i686-unknown-linux-gnu:main"
 
 [target.i686-unknown-linux-musl]
-image="ssalonen/i686-unknown-linux-musl-0.2.1"
+image="ghcr.io/cross-rs/i686-unknown-linux-musl:main"
 
 [target.mips-unknown-linux-gnu]
-image="ssalonen/mips-unknown-linux-gnu-0.2.1"
+image="ghcr.io/cross-rs/mips-unknown-linux-gnu:main"
 
 [target.mips64-unknown-linux-gnuabi64]
-image="ssalonen/mips64-unknown-linux-gnuabi64-0.2.1"
+image="ghcr.io/cross-rs/mips64-unknown-linux-gnuabi64:main"
 
 [target.mips64el-unknown-linux-gnuabi64]
-image="ssalonen/mips64el-unknown-linux-gnuabi64-0.2.1"
+image="ghcr.io/cross-rs/mips64el-unknown-linux-gnuabi64:main"
 
 [target.mipsel-unknown-linux-gnu]
-image="ssalonen/mipsel-unknown-linux-gnu-0.2.1"
+image="ghcr.io/cross-rs/mipsel-unknown-linux-gnu:main"
 
 [target.x86_64-unknown-linux-gnu]
-image="ssalonen/x86_64-unknown-linux-gnu-0.2.1"
+image="ghcr.io/cross-rs/x86_64-unknown-linux-gnu:main"
 
 [target.x86_64-unknown-linux-musl]
-image="ssalonen/x86_64-unknown-linux-musl-0.2.1"
+image="ghcr.io/cross-rs/x86_64-unknown-linux-musl:main"
 
 [target.x86_64-pc-windows-gnu]
-image="ssalonen/x86_64-pc-windows-gnu-0.2.1"
+image="docker.io/ssalonen/x86_64-pc-windows-gnu-0.2.1"
 
