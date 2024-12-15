@@ -84,7 +84,7 @@ jobs:
               with:
                   # use additional cache key, 
                   # ensure cache separation
-                  key: ${{ matrix.job.target }}-${{ matrix.job.libcec }}-${{ matrix.job.pkg-config }}
+                  key: ${{ matrix.job.target }}-${{ matrix.job.libcec }}-${{ matrix.job.pkg-config }}-${{ matrix.job.additional_env.LIBCEC_STATIC }}-${{ matrix.job.additional_env.LD_LIBRARY_PATH }}-${{ matrix.job.additional_env.C_INCLUDE_PATH }}
             # libcec and p8-platform from apt repo
             - if: ${{ startsWith(matrix.job.libcec, 'libcec') && runner.os == 'Linux' }}
               name: Install libcec(-dev) and build dependencies
