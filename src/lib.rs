@@ -988,11 +988,33 @@ mod keypress_tests {
     }
 }
 
+/// Performs the conversion.
+///
+/// Try to create an owned `CecDeviceType` from a logical address `CecLogicalAddress`
 impl TryFrom<CecLogicalAddress> for CecDeviceType {
     type Error = &'static str;
 
     // Note: Match arms are in ascending order of Logical Address numbers
     // (according to CEC specification).  Typically the most common ones are used first.
+    /// This implementation takes ownership of and consumes the `CecLogicalAddress`.
+    ///
+    /// **Note:** Some logical addresses do not map cleanly into a known
+    /// `CecDeviceType`.  As such, this conversion is one-way and may return an
+    /// error for those variants.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - Logical address to use
+    ///
+    /// Returns `Result<Error(&'static str)>` in the following cases
+    /// * when logical address is `Freeuse`
+    /// * when logical address is `Unregistered`
+    /// * when logical address is `Unknown`
+    ///
+    /// These particular logical addresses do not map cleanly into a known
+    /// `CecDeviceType`.  Therefore, the conversion is not possible and an error is
+    /// returned instead.
+    ///
     fn try_from(value: CecLogicalAddress) -> Result<Self, Self::Error> {
         match value {
             CecLogicalAddress::Tv => Ok(CecDeviceType::Tv),
@@ -1014,10 +1036,158 @@ impl TryFrom<CecLogicalAddress> for CecDeviceType {
             }
             CecLogicalAddress::Unregistered => {
                 // uses the broadcast address (15 = 0xf)
-                Err("CecDeviceType::Unregistered has no known CecDeviceType")
+                Err("CecLogicalAddress::Unregistered has no known CecDeviceType")
             }
             // Unknown = -1
-            CecLogicalAddress::Unknown => Err("CecDeviceType::Unknown has no known CecDeviceType"),
+            CecLogicalAddress::Unknown => {
+                Err("CecLogicalAddress::Unknown has no known CecDeviceType")
+            }
+        }
+    }
+}
+
+/// Performs the conversion.
+///
+/// Try to create an owned `CecDeviceType` from a logical address reference `&CecLogicalAddress`
+impl TryFrom<&CecLogicalAddress> for CecDeviceType {
+    type Error = &'static str;
+
+    // Note: Match arms are in ascending order of Logical Address numbers
+    // (according to CEC specification).  Typically the most common ones are used first.
+    /// This implementation borrows the `&CecLogicalAddress`, accepting a reference.
+    ///
+    /// **Note:** Some logical addresses do not map cleanly into a known
+    /// `CecDeviceType`.  As such, this conversion is one-way and may return an
+    /// error for those variants.
+    ///
+    /// # Arguments
+    ///
+    /// * `reference` - Reference to a logical address to use
+    ///
+    /// Returns `Result<Error(&'static str)>` in the following cases
+    /// * when logical address is `Freeuse`
+    /// * when logical address is `Unregistered`
+    /// * when logical address is `Unknown`
+    ///
+    /// These particular logical addresses do not map cleanly into a known
+    /// `CecDeviceType`.  Therefore, the conversion is not possible and an error is
+    /// returned instead.
+    ///
+    fn try_from(reference: &CecLogicalAddress) -> Result<Self, Self::Error> {
+        match reference {
+            CecLogicalAddress::Tv => Ok(CecDeviceType::Tv),
+            CecLogicalAddress::Recordingdevice1 => Ok(CecDeviceType::RecordingDevice),
+            CecLogicalAddress::Recordingdevice2 => Ok(CecDeviceType::RecordingDevice),
+            CecLogicalAddress::Tuner1 => Ok(CecDeviceType::Tuner),
+            CecLogicalAddress::Playbackdevice1 => Ok(CecDeviceType::PlaybackDevice),
+            CecLogicalAddress::Audiosystem => Ok(CecDeviceType::AudioSystem),
+            CecLogicalAddress::Tuner2 => Ok(CecDeviceType::Tuner),
+            CecLogicalAddress::Tuner3 => Ok(CecDeviceType::Tuner),
+            CecLogicalAddress::Playbackdevice2 => Ok(CecDeviceType::PlaybackDevice),
+            CecLogicalAddress::Recordingdevice3 => Ok(CecDeviceType::RecordingDevice),
+            CecLogicalAddress::Tuner4 => Ok(CecDeviceType::Tuner),
+            CecLogicalAddress::Playbackdevice3 => Ok(CecDeviceType::PlaybackDevice),
+            CecLogicalAddress::Reserved1 => Ok(CecDeviceType::Reserved),
+            CecLogicalAddress::Reserved2 => Ok(CecDeviceType::Reserved),
+            CecLogicalAddress::Freeuse => {
+                Err("CecLogicalAddress::Freeuse has no known CecDeviceType")
+            }
+            CecLogicalAddress::Unregistered => {
+                // uses the broadcast address (15 = 0xf)
+                Err("CecLogicalAddress::Unregistered has no known CecDeviceType")
+            }
+            // Unknown = -1
+            CecLogicalAddress::Unknown => {
+                Err("CecLogicalAddress::Unknown has no known CecDeviceType")
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod cec_logical_address_tests {
+    use super::*;
+
+    // Note: array indexing only available by usize, and indexed starting at 0.
+    // So, index by: (i + 1) as usize
+    const NUMERIC_TO_ADDRESS: [CecLogicalAddress; 17] = [
+        // Ordered by ascending logical address number
+        CecLogicalAddress::Unknown,          // -1
+        CecLogicalAddress::Tv,               // 0
+        CecLogicalAddress::Recordingdevice1, // 1
+        CecLogicalAddress::Recordingdevice2, // 2
+        CecLogicalAddress::Tuner1,           // 3
+        CecLogicalAddress::Playbackdevice1,  // 4
+        CecLogicalAddress::Audiosystem,      // 5
+        CecLogicalAddress::Tuner2,           // 6
+        CecLogicalAddress::Tuner3,           // 7
+        CecLogicalAddress::Playbackdevice2,  // 8
+        CecLogicalAddress::Recordingdevice3, // 9
+        CecLogicalAddress::Tuner4,           // 10
+        CecLogicalAddress::Playbackdevice3,  // 11
+        CecLogicalAddress::Reserved1,        // 12
+        CecLogicalAddress::Reserved2,        // 13
+        CecLogicalAddress::Freeuse,          // 14
+        CecLogicalAddress::Unregistered,     // 15
+    ];
+
+    #[test]
+    fn test_cec_logical_address_from_ffi_int() {
+        let mut addresses = ArrayVec::<_, 17>::new();
+        for i in -1..16 {
+            addresses.push(CecLogicalAddress::from_repr(i).unwrap());
+            // Convert i to usize for array indexing, accounting for -1 case
+            let index = (i + 1) as usize;
+            assert_eq!(i, addresses[index].repr());
+            assert_eq!(NUMERIC_TO_ADDRESS[index], addresses[index])
+        }
+    }
+
+    #[test]
+    fn test_cec_logical_address_try_into_cec_device_type() {
+        for address in NUMERIC_TO_ADDRESS.iter() {
+            let result_by_owned = CecDeviceType::try_from(*address);
+            let result_by_ref = CecDeviceType::try_from(address);
+            match address {
+                CecLogicalAddress::Freeuse
+                | CecLogicalAddress::Unregistered
+                | CecLogicalAddress::Unknown => {
+                    for result in [result_by_owned, result_by_ref] {
+                        assert!(result.is_err());
+                        assert_eq!(
+                            result.unwrap_err(),
+                            format!(
+                                "CecLogicalAddress::{:?} has no known CecDeviceType",
+                                address
+                            )
+                        );
+                    }
+                }
+                _ => {
+                    let expected = match address {
+                        CecLogicalAddress::Tv => CecDeviceType::Tv,
+                        CecLogicalAddress::Recordingdevice1
+                        | CecLogicalAddress::Recordingdevice2
+                        | CecLogicalAddress::Recordingdevice3 => CecDeviceType::RecordingDevice,
+                        CecLogicalAddress::Tuner1
+                        | CecLogicalAddress::Tuner2
+                        | CecLogicalAddress::Tuner3
+                        | CecLogicalAddress::Tuner4 => CecDeviceType::Tuner,
+                        CecLogicalAddress::Playbackdevice1
+                        | CecLogicalAddress::Playbackdevice2
+                        | CecLogicalAddress::Playbackdevice3 => CecDeviceType::PlaybackDevice,
+                        CecLogicalAddress::Audiosystem => CecDeviceType::AudioSystem,
+                        CecLogicalAddress::Reserved1 | CecLogicalAddress::Reserved2 => {
+                            CecDeviceType::Reserved
+                        }
+                        _ => unreachable!(),
+                    };
+                    for result in [result_by_owned, result_by_ref] {
+                        assert!(result.is_ok());
+                        assert_eq!(result.unwrap(), expected);
+                    }
+                }
+            }
         }
     }
 }
