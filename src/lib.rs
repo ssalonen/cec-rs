@@ -988,6 +988,40 @@ mod keypress_tests {
     }
 }
 
+impl TryFrom<CecLogicalAddress> for CecDeviceType {
+    type Error = &'static str;
+
+    // Note: Match arms are in ascending order of Logical Address numbers
+    // (according to CEC specification).  Typically the most common ones are used first.
+    fn try_from(value: CecLogicalAddress) -> Result<Self, Self::Error> {
+        match value {
+            CecLogicalAddress::Tv => Ok(CecDeviceType::Tv),
+            CecLogicalAddress::Recordingdevice1 => Ok(CecDeviceType::RecordingDevice),
+            CecLogicalAddress::Recordingdevice2 => Ok(CecDeviceType::RecordingDevice),
+            CecLogicalAddress::Tuner1 => Ok(CecDeviceType::Tuner),
+            CecLogicalAddress::Playbackdevice1 => Ok(CecDeviceType::PlaybackDevice),
+            CecLogicalAddress::Audiosystem => Ok(CecDeviceType::AudioSystem),
+            CecLogicalAddress::Tuner2 => Ok(CecDeviceType::Tuner),
+            CecLogicalAddress::Tuner3 => Ok(CecDeviceType::Tuner),
+            CecLogicalAddress::Playbackdevice2 => Ok(CecDeviceType::PlaybackDevice),
+            CecLogicalAddress::Recordingdevice3 => Ok(CecDeviceType::RecordingDevice),
+            CecLogicalAddress::Tuner4 => Ok(CecDeviceType::Tuner),
+            CecLogicalAddress::Playbackdevice3 => Ok(CecDeviceType::PlaybackDevice),
+            CecLogicalAddress::Reserved1 => Ok(CecDeviceType::Reserved),
+            CecLogicalAddress::Reserved2 => Ok(CecDeviceType::Reserved),
+            CecLogicalAddress::Freeuse => {
+                Err("CecLogicalAddress::Freeuse has no known CecDeviceType")
+            }
+            CecLogicalAddress::Unregistered => {
+                // uses the broadcast address (15 = 0xf)
+                Err("CecDeviceType::Unregistered has no known CecDeviceType")
+            }
+            // Unknown = -1
+            CecLogicalAddress::Unknown => Err("CecDeviceType::Unknown has no known CecDeviceType"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CecDeviceTypeVec(pub ArrayVec<CecDeviceType, 5>);
 
