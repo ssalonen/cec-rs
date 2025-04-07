@@ -309,6 +309,76 @@ impl From<KnownCecLogicalAddress> for cec_logical_address {
     }
 }
 
+/// Perform the conversion
+///
+/// Try to create an owned `CecDeviceType` from a known logical address
+/// `KnownCecLogicalAddress`
+impl TryFrom<KnownCecLogicalAddress> for CecDeviceType {
+    type Error = &'static str;
+
+    /// This implementation takes ownership of and consumes the
+    /// `KnownCecLogicalAddress`.
+    ///
+    /// **Note:** Some known logical addresses do not map cleanly into a known
+    /// `CecDeviceType`.  As such, this conversion is one-way and may return an
+    /// error for the `Freeuse` variant.
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - `KnownCecLogicalAddress` to use
+    ///
+    /// Returns `Result<Error(&'static str)>` in the following cases
+    /// * when logical address is `Freeuse`
+    /// * when logical address is `Unregistered`
+    ///
+    /// These logical addresses do not map cleanly into a known `CecDeviceType`.
+    /// Therefore, the conversion is not possible and an error is returned
+    /// instead.
+    ///
+    /// Notably, a `KnownCecLogicalAddress` cannot contain the following enum
+    /// variant:
+    /// * `Unknown`
+    ///
+    /// Delegates to existing `TryFrom<CecLogicalAddress>` conversion
+    fn try_from(address: KnownCecLogicalAddress) -> Result<Self, Self::Error> {
+        address.0.try_into()
+    }
+}
+
+/// Perform the conversion
+///
+/// Try to create an owned `CecDeviceType` from a known logical address
+/// reference `&KnownCecLogicalAddress`
+impl TryFrom<&KnownCecLogicalAddress> for CecDeviceType {
+    type Error = &'static str;
+
+    ///
+    /// **Note:** Some known logical addresses do not map cleanly into a known
+    /// `CecDeviceType`.  As such, this conversion is one-way and may return an
+    /// error for the `Freeuse` variant.
+    ///
+    /// # Arguments
+    ///
+    /// * `reference` - Reference to a `KnownCecLogicalAddress` to use
+    ///
+    /// Returns `Result<Error(&'static str)>` in the following cases
+    /// * when logical address is `Freeuse`
+    /// * when logical address is `Unregistered`
+    ///
+    /// These logical addresses do not map cleanly into a known `CecDeviceType`.
+    /// Therefore, the conversion is not possible and an error is returned
+    /// instead.
+    ///
+    /// Notably, a `KnownCecLogicalAddress` cannot contain the following enum
+    /// variant:
+    /// * `Unknown`
+    ///
+    /// Delegates to existing `TryFrom<&CecLogicalAddress>` conversion
+    fn try_from(reference: &KnownCecLogicalAddress) -> Result<Self, Self::Error> {
+        reference.0.try_into()
+    }
+}
+
 /// CecLogicalAddress which does not allow Unknown and Unregistered variants
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct KnownAndRegisteredCecLogicalAddress(CecLogicalAddress);
@@ -331,6 +401,78 @@ impl From<KnownAndRegisteredCecLogicalAddress> for CecLogicalAddress {
 impl From<KnownAndRegisteredCecLogicalAddress> for cec_logical_address {
     fn from(address: KnownAndRegisteredCecLogicalAddress) -> Self {
         address.0.repr()
+    }
+}
+
+/// Perform the conversion
+///
+/// Try to create an owned `CecDeviceType` from a known and registered logical
+/// address `KnownAndRegisteredCecLogicalAddress`
+impl TryFrom<KnownAndRegisteredCecLogicalAddress> for CecDeviceType {
+    type Error = &'static str;
+
+    /// This implementation takes ownership of and consumes the
+    /// `KnownAndRegisteredCecLogicalAddress`.
+    ///
+    /// **Note:** Some known and registered logical addresses do not map cleanly
+    /// into a known `CecDeviceType`.  As such, this conversion is one-way and
+    /// may return an error for the `Freeuse` variant.
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - `KnownAndRegisteredLogicalAddress` to use
+    ///
+    /// Returns `Result<Error(&'static str)>` in the following cases
+    /// * when logical address is `Freeuse`
+    ///
+    /// This logical address does not map cleanly into a known `CecDeviceType`.
+    /// Therefore, the conversion is not possible and an error is returned
+    /// instead.
+    ///
+    /// Notably, a `KnownAndRegisteredLogicalAddress` cannot contain the
+    /// following enum variants:
+    /// * `Unregistered`
+    /// * `Unknown`
+    ///
+    /// Delegates to existing `TryFrom<CecLogicalAddress>` conversion
+    fn try_from(address: KnownAndRegisteredCecLogicalAddress) -> Result<Self, Self::Error> {
+        address.0.try_into()
+    }
+}
+
+/// Perform the conversion
+///
+/// Try to create an owned `CecDeviceType` from a known and registered logical
+/// address `KnownAndRegisteredCecLogicalAddress`
+impl TryFrom<&KnownAndRegisteredCecLogicalAddress> for CecDeviceType {
+    type Error = &'static str;
+
+    /// This implementation takes ownership of and consumes the
+    /// `KnownAndRegisteredCecLogicalAddress`.
+    ///
+    /// **Note:** Some known and registered logical addresses do not map cleanly
+    /// into a known `CecDeviceType`.  As such, this conversion is one-way and
+    /// may return an error for the `Freeuse` variant.
+    ///
+    /// # Arguments
+    ///
+    /// * `reference` - `&KnownAndRegisteredLogicalAddress` to use
+    ///
+    /// Returns `Result<Error(&'static str)>` in the following cases
+    /// * when logical address is `Freeuse`
+    ///
+    /// This logical address does not map cleanly into a known `CecDeviceType`.
+    /// Therefore, the conversion is not possible and an error is returned
+    /// instead.
+    ///
+    /// Notably, a `KnownAndRegisteredLogicalAddress` cannot contain the
+    /// following enum variants:
+    /// * `Unregistered`
+    /// * `Unknown`
+    ///
+    /// Delegates to existing `TryFrom<&CecLogicalAddress>` conversion
+    fn try_from(reference: &KnownAndRegisteredCecLogicalAddress) -> Result<Self, Self::Error> {
+        reference.0.try_into()
     }
 }
 
@@ -931,6 +1073,64 @@ mod logical_addresses_tests {
                 &others,
             )
         );
+    }
+
+    #[test]
+    fn test_known_address_from_unknown_impossible() {
+        // Verify conversion from CecLogicalAddress::Unknown is impossible
+        let unknown_addr = CecLogicalAddress::Unknown;
+        assert!(
+            KnownCecLogicalAddress::new(unknown_addr).is_none(),
+            "`KnownCecLogicalAddress::new()` Should have filtered invalid address: {:?}",
+            unknown_addr
+        );
+    }
+
+    #[test]
+    fn test_known_address_to_device_type() {
+        // Test both owned and reference conversions
+        let test_cases = [
+            (CecLogicalAddress::Tv, Ok(CecDeviceType::Tv)),
+            (
+                CecLogicalAddress::Playbackdevice1,
+                Ok(CecDeviceType::PlaybackDevice),
+            ),
+            (
+                CecLogicalAddress::Freeuse,
+                Err("CecLogicalAddress::Freeuse has no known CecDeviceType"),
+            ),
+            (
+                CecLogicalAddress::Unregistered,
+                Err("CecLogicalAddress::Unregistered has no known CecDeviceType"),
+            ),
+            (
+                CecLogicalAddress::Unknown,
+                // Test should trigger on Err() message mismatch in case of refactoring regressions.
+                // This should not be possible because KnownCecLogicalAddress can't be created from Unknown
+                Err("It should not be possible to create a `KnownCecLogicalAddress` from `CecLogicalAddress::Unknown`"),
+            ),
+        ];
+
+        for (input_addr, expected) in test_cases {
+            let known_addr = KnownCecLogicalAddress::new(input_addr);
+            match known_addr {
+                Some(addr) => {
+                    // Test both:
+                    // - TryFrom<&KnownCecLogicalAddress>
+                    // - TryFrom<KnownCecLogicalAddress>
+                    assert_eq!(CecDeviceType::try_from(&addr), expected);
+                    assert_eq!(CecDeviceType::try_from(addr), expected);
+                }
+                // Verify only invalid addresses are filtered
+                None => {
+                    assert!(
+                        matches!(input_addr, CecLogicalAddress::Unknown),
+                        "Only `Unknown` should be filtered to `None` by `KnownCecLogicalAddress::new()`, got `{:?}`",
+                        input_addr
+                    );
+                }
+            }
+        }
     }
 }
 
