@@ -4,7 +4,7 @@ extern crate derive_builder;
 mod enums;
 pub use crate::enums::*;
 
-#[cfg(all(not(abi4), not(abi5), not(abi6)))]
+#[cfg(all(not(abi4), not(abi5), not(abi6), not(abi7)))]
 compile_error!("BUG: libcec abi not detected");
 
 use log::{trace, warn};
@@ -1038,7 +1038,7 @@ struct CecCallbacks {
     pub key_press_callback: Option<Box<dyn FnMut(CecKeypress) + Send>>,
     pub command_received_callback: Option<Box<dyn FnMut(CecCommand) + Send>>,
     pub log_message_callbacks: Option<Box<dyn FnMut(CecLogMessage) + Send>>,
-    // pub onSourceActivated: FnSourceActivated,
+    // TODO: implement missing callbacks (sourceActivated, commandHandler in libcec7, ...) below
 }
 
 pub type FnKeyPress = dyn FnMut(CecKeypress) + Send;
@@ -1107,6 +1107,8 @@ static mut CALLBACKS: ICECCallbacks = ICECCallbacks {
     alert: Option::None,
     menuStateChanged: Option::None,
     sourceActivated: Option::None,
+    #[cfg(abi7)]
+    commandHandler: Option::None,
 };
 
 #[derive(Builder)]
