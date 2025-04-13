@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 12.0.0
+
+- update libcec-sys to 8.0.0, bringing full libcec v7 support
+
 ## 11.0.2
 
 - bumping libcec patch version

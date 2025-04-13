@@ -8,15 +8,15 @@ use libcec_sys::*;
 #[EnumRepr(type = "cec_abort_reason")]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum CecAbortReason {
-    #[doc = "!< cec_abort_reason::CEC_ABORT_REASON_UNRECOGNIZED_OPCODE"]
+    #[doc = "cec_abort_reason::CEC_ABORT_REASON_UNRECOGNIZED_OPCODE"]
     UnrecognizedOpcode = libcec_sys::cec_abort_reason_UNRECOGNIZED_OPCODE,
-    #[doc = "!< cec_abort_reason::CEC_ABORT_REASON_NOT_IN_CORRECT_MODE_TO_RESPOND"]
+    #[doc = "cec_abort_reason::CEC_ABORT_REASON_NOT_IN_CORRECT_MODE_TO_RESPOND"]
     NotInCorrectModeToRespond = libcec_sys::cec_abort_reason_NOT_IN_CORRECT_MODE_TO_RESPOND,
-    #[doc = "!< cec_abort_reason::CEC_ABORT_REASON_CANNOT_PROVIDE_SOURCE"]
+    #[doc = "cec_abort_reason::CEC_ABORT_REASON_CANNOT_PROVIDE_SOURCE"]
     CannotProvideSource = libcec_sys::cec_abort_reason_CANNOT_PROVIDE_SOURCE,
-    #[doc = "!< cec_abort_reason::CEC_ABORT_REASON_INVALID_OPERAND"]
+    #[doc = "cec_abort_reason::CEC_ABORT_REASON_INVALID_OPERAND"]
     InvalidOperand = libcec_sys::cec_abort_reason_INVALID_OPERAND,
-    #[doc = "!< cec_abort_reason::CEC_ABORT_REASON_REFUSED"]
+    #[doc = "cec_abort_reason::CEC_ABORT_REASON_REFUSED"]
     Refused = libcec_sys::cec_abort_reason_REFUSED,
 }
 
@@ -51,7 +51,7 @@ pub enum CecAudioStatus {
 
 //
 // Due to EnumRepr, cannot use #[cfg(abi6)] inside the enum
-// Hence, repeating the enum with two cfg's
+// Hence, repeating the CecVersion enum with two cfg's
 //
 
 #[EnumRepr(type = "cec_version")]
@@ -613,8 +613,15 @@ pub enum CecVendorId {
     HarmanKardon = libcec_sys::cec_vendor_id_HARMAN_KARDON,
     Unknown = libcec_sys::cec_vendor_id_UNKNOWN,
 }
+
+//
+// Due to EnumRepr, cannot use #[cfg(abi6)] inside the enum
+// Hence, repeating the CecAdapterType enum with two cfg's
+//
+
 #[EnumRepr(type = "cec_adapter_type")]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[cfg(not(abi7))]
 pub enum CecAdapterType {
     Unknown = libcec_sys::cec_adapter_type_UNKNOWN,
     P8External = libcec_sys::cec_adapter_type_P8_EXTERNAL,
@@ -626,6 +633,22 @@ pub enum CecAdapterType {
     Aocec = libcec_sys::cec_adapter_type_AOCEC,
     Imx = libcec_sys::cec_adapter_type_IMX,
 }
+#[EnumRepr(type = "cec_adapter_type")]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[cfg(abi7)]
+pub enum CecAdapterType {
+    Unknown = libcec_sys::cec_adapter_type_UNKNOWN,
+    P8External = libcec_sys::cec_adapter_type_P8_EXTERNAL,
+    P8Daughterboard = libcec_sys::cec_adapter_type_P8_DAUGHTERBOARD,
+    Rpi = libcec_sys::cec_adapter_type_RPI,
+    Tda995x = libcec_sys::cec_adapter_type_TDA995x,
+    Exynos = libcec_sys::cec_adapter_type_EXYNOS,
+    Linux = libcec_sys::cec_adapter_type_LINUX,
+    Aocec = libcec_sys::cec_adapter_type_AOCEC,
+    Imx = libcec_sys::cec_adapter_type_IMX,
+    Tegra = libcec_sys::cec_adapter_type_TEGRA,
+}
+
 #[EnumRepr(type = "libcec_version")]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum LibcecVersion {
