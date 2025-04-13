@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 12.0.0
 
 - update libcec-sys to 8.0.0, bringing full libcec v7 support
+- Convenience conversion functions for turning logical address into device type
+
 
 ## 11.0.2
 
