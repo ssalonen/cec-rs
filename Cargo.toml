@@ -6,7 +6,7 @@ version = "12.0.2-alpha.0"
 authors = ['Sami Salonen']
 edition = '2021'
 license = 'GPL-2.0'
-description = 'Thin but safe wrapper for libcec'
+description = 'Deprecated: thin but safe wrapper for libcec; use the official libcec crate for libCEC 8+'
 documentation = 'https://docs.rs/cec-rs'
 readme = 'README.md'
 include = ['/README.md', '/LICENSE', '/Cargo.toml', '/src/*.rs', 'build.rs']
@@ -27,7 +27,7 @@ enum-repr = '0.2'
 version = '9.0.2'
 
 [badges.maintenance]
-status = 'passively-maintained'
+status = 'deprecated'
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(abi4)', 'cfg(abi5)', 'cfg(abi6)', 'cfg(abi7)'] }
