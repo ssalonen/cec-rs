@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 12.0.2
+
+- Deprecated: `cec-rs` is superseded by the official [`libcec` crate](https://crates.io/crates/libcec) for libCEC 8+ (#69)
+
 ## 13.0.1
 
 - update libcec-sys to 9.0.2 (hotfixed version)
