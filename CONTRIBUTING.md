@@ -1,5 +1,11 @@
 # Contribution guidelines
 
+## Project status
+
+`cec-rs` is deprecated and no longer accepts Rust-binding maintenance. New applications should use Pulse-Eight's official [`libcec` crate](https://crates.io/crates/libcec), whose [Rust bindings](https://github.com/Pulse-Eight/libcec/tree/master/src/rust) replace this crate's safe wrapper for libCEC 8 and later. Please report Rust-binding issues and send Rust-binding contributions to [Pulse-Eight/libcec](https://github.com/Pulse-Eight/libcec).
+
+The guidance below is retained for historical reference.
+
 First off, thank you for considering contributing to cec-rs.
 
 If your contribution is not straightforward, please first discuss the change you

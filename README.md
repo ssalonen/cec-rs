@@ -5,7 +5,11 @@
 [![CI](https://github.com/ssalonen/cec-rs/workflows/Continuous%20Integration/badge.svg)](https://github.com/ssalonen/cec-rs/actions)
 [![Coverage Status](https://coveralls.io/repos/github/ssalonen/cec-rs/badge.svg?branch=master)](https://coveralls.io/github/ssalonen/cec-rs?branch=master)
 
-Thin but safe wrappers for libcec. Supports libcec 4.x, 5.x and 6.x with an unified API.
+> [!WARNING]
+> ## Deprecated
+> `cec-rs` is no longer maintained. New applications should use Pulse-Eight's official [`libcec` crate](https://crates.io/crates/libcec), whose [Rust bindings](https://github.com/Pulse-Eight/libcec/tree/master/src/rust) replace this crate's safe wrapper for libCEC 8 and later. Please direct Rust-binding bug reports, feature requests, and contributions to the [Pulse-Eight/libcec repository](https://github.com/Pulse-Eight/libcec).
+
+Thin but safe wrappers for libcec. This crate historically supports libcec 4.x, 5.x, and 6.x with a unified API.
 
 ## Installation
 
