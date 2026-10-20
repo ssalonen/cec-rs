@@ -151,7 +151,7 @@ dependencies = [
 
 [[package]]
 name = "cec-rs"
-version = "12.0.2"
+version = "12.0.3-alpha.0"
 dependencies = [
  "arrayvec",
  "derive_builder",
